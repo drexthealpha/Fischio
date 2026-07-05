@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { fetchAllWagers, fetchOutcome } from "./chain.js";
 import { lamportsToSol, shortKey } from "./data.js";
+import SolLink from "./SolLink.jsx";
 
 const STATE_LABEL = {
   open: "OPEN · waiting for a taker",
@@ -91,7 +92,9 @@ export default function Account() {
                 <tr key={w.address}>
                   <td>
                     <div className="account-fixture">{w.home} v {w.away}</div>
-                    <div className="mono account-addr">{shortKey(w.address)}</div>
+                    <div className="account-addr">
+                      <SolLink account={w.address}>{shortKey(w.address)}</SolLink>
+                    </div>
                   </td>
                   <td>{iAmMaker ? `${w.home} to win` : `against ${w.home}`}</td>
                   <td className="mono">{lamportsToSol(w.stakeLamports)} SOL</td>
@@ -104,7 +107,9 @@ export default function Account() {
                         <span className={iWon ? "outcome-win mono" : "outcome-loss mono"}>
                           {iWon ? `WON ${lamportsToSol(o.paidLamports)} SOL` : "LOST"}
                         </span>
-                        <div className="mono account-addr">{o.sig.slice(0, 16)}…</div>
+                        <div className="account-addr">
+                          <SolLink tx={o.sig}>{o.sig.slice(0, 16)}…</SolLink>
+                        </div>
                       </div>
                     )}
                   </td>

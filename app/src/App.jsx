@@ -8,6 +8,7 @@ import Settlement from "./Settlement.jsx";
 import Live from "./Live.jsx";
 import Account from "./Account.jsx";
 import { PROGRAM_ID } from "./data.js";
+import SolLink from "./SolLink.jsx";
 
 // ?live&wager=<address> switches the settlement view to the real bot tail.
 // The recorded replay stays the default so the safe demo is never lost.
@@ -82,7 +83,9 @@ export default function App() {
       {!gate && view === "Settlement" && (LIVE_MODE ? <Live wagerAddress={LIVE_WAGER} /> : <Settlement />)}
       {!gate && view === "Account" && <Account />}
 
-      <footer className="foot mono">program {PROGRAM_ID}</footer>
+      <footer className="foot mono">
+        program <SolLink account={PROGRAM_ID}>{PROGRAM_ID}</SolLink>
+      </footer>
     </div>
   );
 }

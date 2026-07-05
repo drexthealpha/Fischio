@@ -194,3 +194,16 @@ export async function refreshFixtures() {
     return UPCOMING; // bundled snapshot; refreshed at build time by scripts/refresh-fixtures.mjs
   }
 }
+
+/// Compact live scores for the fixtures on visible tickets. Serverless proxy only;
+/// silently absent in local dev or when the proxy is unconfigured.
+export async function fetchLiveScores(fixtureIds) {
+  if (!fixtureIds.length) return {};
+  try {
+    const r = await fetch(`/api/scores?ids=${fixtureIds.join(",")}`);
+    if (!r.ok) return {};
+    return (await r.json()).scores ?? {};
+  } catch {
+    return {};
+  }
+}

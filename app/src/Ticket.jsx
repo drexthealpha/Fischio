@@ -1,7 +1,15 @@
 import { lamportsToSol, shortKey } from "./data.js";
 import Barcode from "./Barcode.jsx";
+import SolLink from "./SolLink.jsx";
 
-const PHASE_NAMES = { 5: "FULL TIME", 10: "AFTER EXTRA TIME" };
+const PHASE_NAMES = { 5: "FULL TIME", 10: "AFTER EXTRA TIME", 13: "AFTER PENALTIES" };
+
+// feed phase codes -> short board chips (confirmed from real feed data, RECON.md)
+const LIVE_PHASE = {
+  1: "PRE", 2: "H1", 3: "HT", 4: "H2", 5: "FT", 6: "ET", 7: "ET1", 8: "ET·HT",
+  9: "ET2", 10: "AET", 11: "PENS", 12: "PENS", 13: "AET·P", 100: "FINAL",
+};
+const IN_PLAY = new Set([2, 3, 4, 6, 7, 8, 9, 11, 12]);
 
 function Field({ label, children, mono = true }) {
   return (
@@ -12,9 +20,11 @@ function Field({ label, children, mono = true }) {
   );
 }
 
-export default function Ticket({ wager }) {
+export default function Ticket({ wager, live }) {
   const settled = wager.state === "settled";
   const pot = 2 * wager.stakeLamports;
+  const showLive = !settled && !wager.finalScore && live?.goals;
+  const minute = live?.clockSeconds != null ? `${Math.floor(live.clockSeconds / 60)}'` : "";
 
   return (
     <article className={`ticket ${settled ? "ticket-settled" : ""}`}>
@@ -26,6 +36,10 @@ export default function Ticket({ wager }) {
             <span className="display board-score">
               {wager.finalScore[0]}–{wager.finalScore[1]}
             </span>
+          ) : showLive ? (
+            <span className="display board-score">
+              {live.goals[0]}–{live.goals[1]}
+            </span>
           ) : (
             <span className="display board-score board-score-tbd">v</span>
           )}
@@ -33,6 +47,15 @@ export default function Ticket({ wager }) {
         </div>
         <div className="board-meta mono">
           {settled && <span className="board-ft">FT</span>}
+          {showLive && IN_PLAY.has(live.statusId) && (
+            <span className="live-tag">
+              <span className="live-tag-dot" />
+              LIVE · {LIVE_PHASE[live.statusId] ?? ""} {minute}
+            </span>
+          )}
+          {showLive && !IN_PLAY.has(live.statusId) && LIVE_PHASE[live.statusId] && (
+            <span className="board-ft">{LIVE_PHASE[live.statusId]}</span>
+          )}
           <span>{wager.kickoff}</span>
           <span>FIXTURE {wager.fixtureId}</span>
         </div>
@@ -46,9 +69,15 @@ export default function Ticket({ wager }) {
       </p>
 
       <div className="ticket-fields">
-        <Field label="Maker · backs the bet">{shortKey(wager.maker)}</Field>
+        <Field label="Maker · backs the bet">
+          <SolLink account={wager.maker}>{shortKey(wager.maker)}</SolLink>
+        </Field>
         <Field label="Taker · against">
-          {wager.state === "open" ? "none yet: yours to take" : shortKey(wager.taker)}
+          {wager.state === "open" ? (
+            "none yet: yours to take"
+          ) : (
+            <SolLink account={wager.taker}>{shortKey(wager.taker)}</SolLink>
+          )}
         </Field>
         <Field label="Stake each">{lamportsToSol(wager.stakeLamports)} SOL</Field>
         <Field label="Pot">{lamportsToSol(pot)} SOL</Field>
@@ -73,12 +102,19 @@ export default function Ticket({ wager }) {
               </div>
             )}
             <div className="stub-sig">
-              <div className="microlabel">Settlement transaction</div>
-              <div className="mono stub-sig-value">{wager.settleSig}</div>
+              <div className="microlabel">Settlement transaction · click to verify</div>
+              <SolLink tx={wager.settleSig} className="stub-sig-value">
+                {wager.settleSig}
+              </SolLink>
             </div>
             <div className="stub-settler mono">
-              settled permissionlessly by {shortKey(wager.settler)} · tip{" "}
-              {lamportsToSol(wager.tipLamports)} SOL
+              settled permissionlessly by{" "}
+              {wager.settler ? (
+                <SolLink account={wager.settler}>{shortKey(wager.settler)}</SolLink>
+              ) : (
+                "an ordinary keypair"
+              )}{" "}
+              · tip {lamportsToSol(wager.tipLamports)} SOL
             </div>
             <Barcode data={wager.settleSig} />
           </>

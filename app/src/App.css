@@ -544,3 +544,37 @@
   color: var(--g6);
   margin-bottom: 8px;
 }
+
+/* verifiable ids: quiet underline, pitch on hover; the accent marks interactive */
+.sol-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--g4);
+  text-underline-offset: 2px;
+}
+.sol-link:hover { color: var(--pitch); text-decoration-color: var(--pitch); }
+a.stub-sig-value { display: block; }
+
+/* live match state on tickets: the one place the accent signals "now" */
+.live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--pitch);
+  font-weight: 500;
+}
+.live-tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pitch);
+}
+
+.faucet-note {
+  margin-top: 16px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--g7);
+  border: 1px dashed var(--g4);
+  background: var(--g1);
+}

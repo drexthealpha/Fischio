@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import Ticket from "./Ticket.jsx";
 import CreateWager from "./CreateWager.jsx";
-import { fetchAllWagers, fetchLatestSettlement, refreshFixtures, acceptWagerTx, createWagerTx, UPCOMING, RPC } from "./chain.js";
+import SolLink from "./SolLink.jsx";
+import { fetchAllWagers, fetchLatestSettlement, fetchLiveScores, refreshFixtures, acceptWagerTx, createWagerTx, connection, UPCOMING, RPC } from "./chain.js";
 import { lamportsToSol, shortKey } from "./data.js";
 
 export default function Markets() {
@@ -14,6 +15,8 @@ export default function Markets() {
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [liveScores, setLiveScores] = useState({});
+  const [noSol, setNoSol] = useState(false);
 
   const [latest, setLatest] = useState(undefined); // undefined = loading, null = none yet
 
@@ -26,6 +29,28 @@ export default function Markets() {
     refreshFixtures().then((f) => { setFixtures(f); load(); });
     fetchLatestSettlement().then(setLatest).catch(() => setLatest(null));
   }, []);
+
+  // tickets breathe with the feed: poll compact live state for visible fixtures
+  useEffect(() => {
+    if (!wagers) return;
+    const ids = [...new Set(
+      wagers.filter((w) => w.state === "open" || w.state === "active").map((w) => w.fixtureId)
+    )];
+    if (ids.length === 0) return;
+    let alive = true;
+    const tick = () => fetchLiveScores(ids).then((s) => { if (alive) setLiveScores(s); });
+    tick();
+    const t = setInterval(tick, 30_000);
+    return () => { alive = false; clearInterval(t); };
+  }, [wagers]);
+
+  // first-session guidance: staking needs devnet SOL, and new wallets have none
+  useEffect(() => {
+    if (!wallet) { setNoSol(false); return; }
+    connection.getBalance(wallet.publicKey)
+      .then((b) => setNoSol(b < 5_000_000))
+      .catch(() => setNoSol(false));
+  }, [wallet]);
 
   // an Open wager past expiry is refundable, not takeable; it is not a market
   const now = Date.now() / 1000;
@@ -77,6 +102,16 @@ export default function Markets() {
   return (
     <div className="markets">
       {notice && <div className="notice mono">{notice}</div>}
+      {noSol && (
+        <div className="faucet-note mono">
+          Connected wallet has no devnet SOL, so it cannot stake yet. Get free test
+          SOL at{" "}
+          <a className="sol-link" href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer">
+            faucet.solana.com
+          </a>
+          , then refresh.
+        </div>
+      )}
 
       {/* first thing a visitor sees: the product working, reconstructed live from chain */}
       {latest !== null && (
@@ -125,13 +160,14 @@ export default function Markets() {
                 className={selected?.address === w.address ? "market-card market-card-on" : "market-card"}
                 onClick={() => setSelected(selected?.address === w.address ? null : w)}
               >
-                <Ticket wager={w} />
+                <Ticket wager={w} live={liveScores[w.fixtureId]} />
                 {selected?.address === w.address && (
                   <div className="take-panel">
                     <div className="take-terms">
                       Take the other side: <strong>{w.away} not to lose in 90&#8242;+ET</strong>{" "}
                       (draw or shootout counts as your win). Locks{" "}
-                      {lamportsToSol(w.stakeLamports)} SOL against {shortKey(w.maker)}.
+                      {lamportsToSol(w.stakeLamports)} SOL against{" "}
+                      <SolLink account={w.maker}>{shortKey(w.maker)}</SolLink>.
                     </div>
                     <button className="create-submit" disabled={busy} onClick={(e) => { e.stopPropagation(); accept(w); }}>
                       {busy ? "Submitting…" : `Lock ${lamportsToSol(w.stakeLamports)} SOL · take this bet`}
@@ -150,7 +186,7 @@ export default function Markets() {
               </div>
               <div className="ticket-grid">
                 {active.map((w) => (
-                  <Ticket key={w.address} wager={w} />
+                  <Ticket key={w.address} wager={w} live={liveScores[w.fixtureId]} />
                 ))}
               </div>
             </>
