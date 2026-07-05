@@ -1,5 +1,4 @@
-import { Buffer } from "buffer";
-globalThis.Buffer = Buffer; // anchor's borsh layer expects Node's Buffer in the browser
+import "./polyfill.js"; // first import, always: sets global Buffer before chain.js evaluates
 
 import React from "react";
 import ReactDOM from "react-dom/client";

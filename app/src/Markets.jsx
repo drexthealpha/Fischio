@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import Ticket from "./Ticket.jsx";
 import CreateWager from "./CreateWager.jsx";
-import { fetchAllWagers, acceptWagerTx, createWagerTx, UPCOMING, RPC } from "./chain.js";
+import { fetchAllWagers, fetchLatestSettlement, refreshFixtures, acceptWagerTx, createWagerTx, UPCOMING, RPC } from "./chain.js";
 import { lamportsToSol, shortKey } from "./data.js";
 
 export default function Markets() {
@@ -15,13 +15,22 @@ export default function Markets() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
 
+  const [latest, setLatest] = useState(undefined); // undefined = loading, null = none yet
+
   const load = () =>
     fetchAllWagers()
       .then((w) => { setWagers(w); setLoadError(null); })
       .catch((e) => setLoadError(String(e.message ?? e)));
-  useEffect(() => { load(); }, []);
+  const [fixtures, setFixtures] = useState(UPCOMING);
+  useEffect(() => {
+    refreshFixtures().then((f) => { setFixtures(f); load(); });
+    fetchLatestSettlement().then(setLatest).catch(() => setLatest(null));
+  }, []);
 
-  const open = (wagers ?? []).filter((w) => w.state === "open");
+  // an Open wager past expiry is refundable, not takeable; it is not a market
+  const now = Date.now() / 1000;
+  const open = (wagers ?? []).filter((w) => w.state === "open" && w.expiryTs > now);
+  const expiredOpen = (wagers ?? []).filter((w) => w.state === "open" && w.expiryTs <= now);
   const active = (wagers ?? []).filter((w) => w.state === "active");
 
   const accept = async (ticket) => {
@@ -44,7 +53,7 @@ export default function Markets() {
     if (!wallet) { setNotice("Connect a wallet to open a wager."); return; }
     const lamports = Math.round(Number(stake) * 1e9);
     if (!Number.isFinite(lamports) || lamports <= 0) { setNotice("Enter a valid stake."); return; }
-    const fx = UPCOMING.find((f) => f.id === fixtureId);
+    const fx = fixtures.find((f) => f.id === fixtureId);
     const kickoff = fx ? new Date(fx.kickoff).getTime() : Date.now();
     setBusy(true);
     setNotice(null);
@@ -69,12 +78,36 @@ export default function Markets() {
     <div className="markets">
       {notice && <div className="notice mono">{notice}</div>}
 
+      {/* first thing a visitor sees: the product working, reconstructed live from chain */}
+      {latest !== null && (
+        <>
+          <div className="section-head">
+            <h2 className="display section-title">Latest settlement</h2>
+            <span className="mono section-sub">
+              read live from devnet · settled by proof, not by anyone
+            </span>
+          </div>
+          <div className="hero-ticket">
+            {latest === undefined ? (
+              <div className="feed-idle mono">reading latest settlement from chain…</div>
+            ) : (
+              <Ticket wager={latest} />
+            )}
+          </div>
+        </>
+      )}
+
       <div className="markets-columns">
         <div>
-          <div className="section-head">
+          <div className="section-head section-head-later">
             <h2 className="display section-title">Open markets</h2>
             <span className="mono section-sub">on-chain · {RPC.includes("devnet") ? "devnet" : RPC}</span>
           </div>
+          {expiredOpen.length > 0 && (
+            <div className="mono expired-note">
+              {expiredOpen.length} expired unmatched ticket{expiredOpen.length > 1 ? "s" : ""} awaiting refund (not shown)
+            </div>
+          )}
 
           {loadError && <div className="live-error mono">Could not read wagers from chain: {loadError}</div>}
           {wagers === null && !loadError && <div className="feed-idle mono">reading wagers from chain…</div>}
@@ -124,7 +157,7 @@ export default function Markets() {
           )}
         </div>
 
-        <CreateWager onCreate={create} busy={busy} walletConnected={!!wallet} />
+        <CreateWager onCreate={create} busy={busy} walletConnected={!!wallet} fixtures={fixtures} />
       </div>
     </div>
   );

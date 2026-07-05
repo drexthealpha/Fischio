@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import "./App.css";
+import Landing from "./Landing.jsx";
 import Markets from "./Markets.jsx";
 import Settlement from "./Settlement.jsx";
 import Live from "./Live.jsx";
@@ -17,29 +19,42 @@ const VIEWS = ["Markets", "Settlement", "Account"];
 
 export default function App() {
   const [view, setView] = useState(LIVE_MODE ? "Settlement" : "Markets");
+  const [browsing, setBrowsing] = useState(false);
+  const { connected } = useWallet();
+
+  // disconnected visitors get the landing; connect (or one explicit click) enters the app
+  const gate = !connected && !browsing && !LIVE_MODE;
 
   return (
     <div className="shell">
       <header className="topbar">
         <div className="display wordmark">
-          WC<span className="wordmark-dot">·</span>SETTLE
+          FISCHIO<span className="wordmark-dot">.</span>
         </div>
-        <nav className="nav">
-          {VIEWS.map((v) => (
-            <button
-              key={v}
-              className={view === v ? "nav-link nav-link-on" : "nav-link"}
-              onClick={() => setView(v)}
-            >
-              {v}
-              {v === "Settlement" && LIVE_MODE && <span className="nav-live"> LIVE</span>}
-            </button>
-          ))}
-        </nav>
-        <WalletMultiButton />
+        {gate ? (
+          <WalletMultiButton />
+        ) : (
+          <>
+            <nav className="nav">
+              {VIEWS.map((v) => (
+                <button
+                  key={v}
+                  className={view === v ? "nav-link nav-link-on" : "nav-link"}
+                  onClick={() => setView(v)}
+                >
+                  {v}
+                  {v === "Settlement" && LIVE_MODE && <span className="nav-live"> LIVE</span>}
+                </button>
+              ))}
+            </nav>
+            <WalletMultiButton />
+          </>
+        )}
       </header>
 
-      {view === "Markets" && (
+      {gate && <Landing onBrowse={() => setBrowsing(true)} />}
+
+      {!gate && view === "Markets" && (
         <>
           <p className="tagline">
             Two-party World Cup wagers, escrowed on Solana and settled by{" "}
@@ -64,8 +79,8 @@ export default function App() {
           </section>
         </>
       )}
-      {view === "Settlement" && (LIVE_MODE ? <Live wagerAddress={LIVE_WAGER} /> : <Settlement />)}
-      {view === "Account" && <Account />}
+      {!gate && view === "Settlement" && (LIVE_MODE ? <Live wagerAddress={LIVE_WAGER} /> : <Settlement />)}
+      {!gate && view === "Account" && <Account />}
 
       <footer className="foot mono">program {PROGRAM_ID}</footer>
     </div>

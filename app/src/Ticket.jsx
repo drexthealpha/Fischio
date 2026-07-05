@@ -47,7 +47,9 @@ export default function Ticket({ wager }) {
 
       <div className="ticket-fields">
         <Field label="Maker · backs the bet">{shortKey(wager.maker)}</Field>
-        <Field label="Taker · against">{shortKey(wager.taker)}</Field>
+        <Field label="Taker · against">
+          {wager.state === "open" ? "none yet: yours to take" : shortKey(wager.taker)}
+        </Field>
         <Field label="Stake each">{lamportsToSol(wager.stakeLamports)} SOL</Field>
         <Field label="Pot">{lamportsToSol(pot)} SOL</Field>
       </div>

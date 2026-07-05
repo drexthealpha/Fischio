@@ -122,3 +122,75 @@ export async function fetchOutcome(ticket) {
   }
   return null;
 }
+
+/// Reconstruct a settlement receipt from chain alone: the wager account plus its
+/// settle transaction, with the proven score and phase recovered by decoding the
+/// settle instruction bytes. Nothing is stored off-chain.
+async function decodeSettleInto(ticket) {
+  try {
+    const tx = await connection.getTransaction(ticket.settleSig, { maxSupportedTransactionVersion: 0 });
+    const msg = tx.transaction.message;
+    const keys = msg.staticAccountKeys ?? msg.accountKeys;
+    ticket.settler = keys[0].toBase58(); // fee payer = the permissionless settler
+    const progIdx = keys.findIndex((k) => k.toBase58() === readProgram.programId.toBase58());
+    const compiled = msg.compiledInstructions
+      ? msg.compiledInstructions.map((ix) => ({ pi: ix.programIdIndex, data: Buffer.from(ix.data) }))
+      : msg.instructions.map((ix) => ({ pi: ix.programIdIndex, data: Buffer.from(anchor.utils.bytes.bs58.decode(ix.data)) }));
+    const ours = compiled.find((ix) => ix.pi === progIdx);
+    const decoded = readProgram.coder.instruction.decode(ours.data);
+    if (decoded?.name === "settle") {
+      const a = decoded.data.statA.statToProve;
+      const b = decoded.data.statB?.statToProve;
+      ticket.provenLeaves = b ? [a, b] : [a];
+      if (b) ticket.finalScore = [a.value, b.value];
+    }
+  } catch {
+    // receipt still renders with sig + parties; leaves stay empty if decode fails
+  }
+}
+
+/// Every settlement this program has executed, newest first, decoded from chain.
+/// Memoized per session: three views share one scan instead of tripling RPC load
+/// against the rate-limited public endpoint.
+let settlementsPromise = null;
+export function fetchSettlements(force = false) {
+  if (force || !settlementsPromise) settlementsPromise = scanSettlements();
+  return settlementsPromise;
+}
+
+async function scanSettlements() {
+  const all = await readProgram.account.wager.all();
+  const settled = all.filter(({ account }) => "settled" in account.state);
+  const out = [];
+  for (const { publicKey, account } of settled) {
+    const sigs = await connection.getSignaturesForAddress(publicKey, { limit: 10 });
+    const s = sigs.find((x) => !x.err); // last successful write = the settle tx
+    if (!s) continue;
+    const ticket = toTicket(publicKey, account);
+    ticket.settleSig = s.signature;
+    ticket.blockTime = s.blockTime ?? 0;
+    await decodeSettleInto(ticket);
+    out.push(ticket);
+  }
+  return out.sort((a, b) => b.blockTime - a.blockTime);
+}
+
+export async function fetchLatestSettlement() {
+  return (await fetchSettlements())[0] ?? null;
+}
+
+/// Live fixtures via the serverless proxy; bundled snapshot is the offline fallback.
+/// Updates the shared fixture map in place so tickets rendered afterwards resolve
+/// names from fresh data.
+export async function refreshFixtures() {
+  try {
+    const r = await fetch("/api/fixtures");
+    if (!r.ok) throw new Error(String(r.status));
+    const { fixtures } = await r.json();
+    FIXTURES_BY_ID.clear();
+    for (const f of fixtures) FIXTURES_BY_ID.set(f.id, f);
+    return fixtures.filter((f) => new Date(f.kickoff) > new Date());
+  } catch {
+    return UPCOMING; // bundled snapshot; refreshed at build time by scripts/refresh-fixtures.mjs
+  }
+}

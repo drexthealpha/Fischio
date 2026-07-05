@@ -1,17 +1,26 @@
 import { useState } from "react";
 import { UPCOMING } from "./chain.js";
-import { FIXTURES as FALLBACK } from "./data.js";
 
-const list = UPCOMING.length
-  ? UPCOMING.map((f) => ({ id: f.id, home: f.home, away: f.away, kickoff: f.kickoff.slice(0, 16).replace("T", " ") + " UTC" }))
-  : FALLBACK;
+const fmt = (f) => ({ id: f.id, home: f.home, away: f.away, kickoff: f.kickoff.slice(0, 16).replace("T", " ") + " UTC" });
 
-export default function CreateWager({ onCreate, busy = false, walletConnected = true }) {
+export default function CreateWager({ onCreate, busy = false, walletConnected = true, fixtures = UPCOMING }) {
+  const list = fixtures.map(fmt);
   const [fixtureId, setFixtureId] = useState(list[0]?.id);
   const [side, setSide] = useState("home");
   const [stake, setStake] = useState("0.01");
 
   const fixture = list.find((f) => f.id === fixtureId) ?? list[0];
+  if (!fixture) {
+    return (
+      <section className="create">
+        <h2 className="display create-title">Open a wager</h2>
+        <p className="empty-state">
+          No upcoming fixtures in the feed right now. New matches appear here the
+          moment TxLINE lists them.
+        </p>
+      </section>
+    );
+  }
   const backed = side === "home" ? fixture.home : fixture.away;
   const opponent = side === "home" ? fixture.away : fixture.home;
 
