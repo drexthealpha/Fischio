@@ -36,6 +36,13 @@ mid-match totals, mid-shootout leaves, spliced events, wrong roots account. A
 tampered value dies inside the oracle's own Merkle verification. 20 adversarial
 tests attack the money path with real captured proofs; 20 pass.
 
+We verified the engine against TxODDS's own published examples. Our resolution
+agrees with their game_finalised recipe on every tested fixture, and our on-chain
+gate is stricter: it rejects the period-0 leaves that a seq recipe would accept,
+which is exactly the settle-early exploit staying closed. The newly observed
+post-match confirmation status (100) always follows a terminal phase in real
+data; if that ever changes, the allow-list extends in one line.
+
 ## No trusted operator
 
 Settlement does not depend on any machine we control. The settle instruction is
@@ -95,9 +102,10 @@ proof verification and payout included.
 The settle instruction answers one question: did a verified stat cross a line when
 the match ended. Everything a sportsbook sells is composition on top of that
 primitive. Next, in order: more market types on the same stats (totals, corners,
-cards are already provable leaves), multi-leg parlays as chained predicates,
-pooled counterparties instead of 1v1 matching, and USDC stakes on mainnet behind
-an audit. The engine does not change; the products stack on it.
+cards are already provable leaves), multi-leg parlays via the oracle's
+validate_stat_v2 N-stat strategies (one proof and one strategy expression per
+parlay), pooled counterparties instead of 1v1 matching, and USDC stakes on
+mainnet behind an audit. The engine does not change; the products stack on it.
 
 ## Status
 

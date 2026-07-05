@@ -134,6 +134,38 @@ Callers must request an explicit compute budget (about 400k CU), since the 200k
 default fails mid-CPI. Failed verification aborts the whole transaction, so no
 partial state can exist by construction.
 
+## Verified against the sponsor's own examples
+
+After TxODDS published their tx-on-chain examples repo, we re-verified the engine
+against it and against the deployed devnet binary, by probe rather than by docs.
+
+Instruction choice. The deployed devnet program contains both `validate_stat` and
+`validate_stat_v2` (confirmed by discriminator probe: both instructions answer, a
+random discriminator does not), and v1 remains in the latest published IDL (1.5.5)
+and in the sponsor's current examples. Our CPI targets a current, supported
+instruction; every settlement signature in this document proves it verifies. The
+v2 instruction adds N-stat payloads with strategy expressions (indexed single and
+binary predicates, plus geometric distance). Our two-stat market is exactly v2's
+binary predicate, and v2 is the native vehicle for the parlay roadmap item:
+multi-leg positions become one proof with one strategy, no engine redesign.
+
+Finality method. The sponsor's recipe resolves outcomes off-chain from the feed
+record with Action = game_finalised. We compared both methods on three real
+fixtures (USA v Bosnia, Netherlands v Morocco after penalties, Paraguay v France):
+identical outcomes on all three. The difference is that game_finalised is a
+seq-picking recipe, while our gate is enforced on-chain, and it is stricter:
+proofs at the game_finalised seq carry period 0 leaves, which on-chain are
+indistinguishable from mid-match running totals, so our program rejects them by
+design. That strictness is the settle-early exploit staying closed. Our method
+also fires earlier in practice: Paraguay v France hit its terminal phase-5 record
+about ten minutes before its game_finalised marker.
+
+One new observation from that comparison, logged honestly: recent matches emit a
+post-match confirmation status 100 after the terminal phase. In all observed data
+it follows a 5/10/13 record and never replaces one, so the allow-list is
+unchanged; if the feed ever finalizes a match without a preceding terminal phase,
+the fix is one constant plus one test.
+
 ## Testing: 20 adversarial cases against the real oracle
 
 The suite runs against a local validator loaded with the real txoracle binary and
