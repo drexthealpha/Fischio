@@ -1,0 +1,26 @@
+node_modules/
+target/
+.anchor/
+test-ledger/
+dist/
+
+# secrets: keypairs and API credentials never enter the public repo
+day1/devnet-wallet.json
+day1/credentials.json
+day1/actors-*.json
+keeper/keeper-key.json
+
+# local run artifacts
+live.log
+live-full.log.bak
+day1/*.html
+day1/history-*.json
+test-results.txt
+txline-app-screenshot.png
+
+docs/VIDEO-SCRIPT.md
+MATCHDAY.md
+CLAUDE.md
+DESIGN-DRAFT.md
+keeper-upload/
+keeper-upload.zip

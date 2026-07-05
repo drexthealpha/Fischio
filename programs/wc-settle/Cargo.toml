@@ -1,0 +1,20 @@
+[package]
+name = "wc-settle"
+version = "0.1.0"
+description = "Permissionless proof-based settlement of World Cup wagers via TxLINE validate_stat"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "wc_settle"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = "0.31.1"

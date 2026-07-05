@@ -1,0 +1,325 @@
+{
+  "scanned": 800,
+  "oldest": "2026-06-30T23:07:02.000Z",
+  "counts": {
+    "insert_batch_root": 539,
+    "insert_scores_root": 146,
+    "insert_fixtures_root": 45,
+    "subscribe": 17,
+    "validate_stat": 52
+  },
+  "found": [
+    {
+      "sig": "3xABHmMiidRPC3vRFUfemALSti7BeHioXpMJop5RkKcF7Z1TpM6he1VhDhX1T8jaDpPxZfoLMHiCZ4E6DdizMiTB",
+      "name": "validate_stat",
+      "cu": 138504,
+      "time": "2026-07-02T02:32:47.000Z"
+    },
+    {
+      "sig": "5P1cRXU8DBiYYcvuDCoZaLa4ingZr75iVsDkA6DVNrwGfjNcYHKC8suAK8JmSjRyGekSRmcB2hKEXe99NhnqXNfg",
+      "name": "validate_stat",
+      "cu": 111034,
+      "time": "2026-07-02T02:32:46.000Z"
+    },
+    {
+      "sig": "4kBcQ1xsPyuWCMQAvW3YMoygQq74vACXHhtDH6nGeicGq4tdN2bJRfwExLmt3GjyCu2jCKaWAi6L8BxGoQH8RPuz",
+      "name": "validate_stat",
+      "cu": 138502,
+      "time": "2026-07-01T20:26:03.000Z"
+    },
+    {
+      "sig": "57XjfmaUBgsy1fxxvudSqds4Gv3Mbj2YvDTXeCuE5ocUcEPUkvVkY8SkY6kbHg94aTYgWgsD49mbKg6sysxWSip9",
+      "name": "validate_stat",
+      "cu": 138502,
+      "time": "2026-07-01T20:26:03.000Z"
+    },
+    {
+      "sig": "5ANWb7KbktU1xqHKT56BafPCkSgAbymMG8Wp8zpqRMG9B7HNzekj7nx92bpsHNcfgVRxzgTMHhqvC4J4SS4y5BNb",
+      "name": "validate_stat",
+      "cu": 138507,
+      "time": "2026-07-01T20:26:02.000Z"
+    },
+    {
+      "sig": "5mbdgQo6ti1CunfFH8h8kBYAN8B46w2QmaFPBWJTwfJGmL9BcsBTH61W7ffmJEbCqtgzkahs7m6F7mtxrny6aYww",
+      "name": "validate_stat",
+      "cu": 138502,
+      "time": "2026-07-01T20:26:02.000Z"
+    },
+    {
+      "sig": "2JK8SeCiNm8TQ2q9dXzZ88MptypVxqGKwhraJNWQRmq8TwUHSknoc7Eck1XgXcW6ZqdA6UMaoTSVkW2Xm3pxCfMb",
+      "name": "validate_stat",
+      "cu": 235933,
+      "time": "2026-07-01T18:03:27.000Z"
+    },
+    {
+      "sig": "yQfFJ2cE4Jrb2EpA6jsJqV3knEG41EPW7i5hwmL2o93xGksvuajXd91NUNFTk2abnWdW4nThXqq7FXCvqzdSbNs",
+      "name": "validate_stat",
+      "cu": 235933,
+      "time": "2026-07-01T18:03:26.000Z"
+    },
+    {
+      "sig": "4P5D5shP8AqYEjSwj2qpN4dQcXH8mGnPMcFHuk6gAWiriC244kuVse7eDfboe6HBoib5RTzw7e2dWMs7wV6GBTpM",
+      "name": "validate_stat",
+      "cu": 205459,
+      "time": "2026-07-01T17:53:44.000Z"
+    },
+    {
+      "sig": "4NNggiFjG1MLWnYVkcMmt4XK5BMULJ1v5Pd1182PknYvaWEgeKk3NwajJ6djE2UWKBAcwvY1znJB2txoDcpebRT9",
+      "name": "validate_stat",
+      "cu": 205458,
+      "time": "2026-07-01T17:53:43.000Z"
+    },
+    {
+      "sig": "4pSQARwKqS8qjsNtVrp9WwJxNwgNFhx8JmtF4f8p9phyP4eKzfsUopWY3TFVEDLX3rQXmLMag2i1NzCt75Vxw3LP",
+      "name": "validate_stat",
+      "cu": 205460,
+      "time": "2026-07-01T17:53:39.000Z"
+    },
+    {
+      "sig": "3NaN2kdenfQ7xhZRu6diFWSyP2cKemvEfRdJiw6nT3A85NEZp9KWDPgsTv2j9DoWFdqTf71PDFzNKYS1oAvjTzkq",
+      "name": "validate_stat",
+      "cu": 205460,
+      "time": "2026-07-01T17:53:38.000Z"
+    },
+    {
+      "sig": "5S3kn6fPzcV75tAMUJaD9eB5KK9M8184AreAnbANttUQEhi8Kx2Vn1pTy3mhEq1uNYSaUZVfSZ1XJTB3bPsWuYmA",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:47:55.000Z"
+    },
+    {
+      "sig": "2JF6bsJz796nriAU1cdLkCMTZjDrqxKbbUn69DSoaeCAxCZKEPRNkesTJj2AcKwG1p7gm72tMx4CvwoibgLiYaZR",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:47:55.000Z"
+    },
+    {
+      "sig": "5sWEHrY6efoJD8fYdPsXJZM1HMNjHPZ4ceZGMhYrweS5MT1UV5rGDy1A4MkE94RswiV2Xo2BSuiM3CKR4RUG7hPp",
+      "name": "validate_stat",
+      "cu": 193242,
+      "time": "2026-07-01T17:47:30.000Z"
+    },
+    {
+      "sig": "3CrGxVHx2rqfoYLmtbHahXhwAc2GXgp35xsv2LSW8dLVNqU7WYCkuuKFNdXMD797WKnwrJ6dyJQ98LLQhmevwDVb",
+      "name": "validate_stat",
+      "cu": 193242,
+      "time": "2026-07-01T17:47:30.000Z"
+    },
+    {
+      "sig": "36qazsuoYt8EpeKEcCRjUEi7LNQwKAiQ4xnxpwoJD6WTvm2ALyiDLi9rShEkTxwiMgfoeYKo4UQXPjeNPNji2cki",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:46:59.000Z"
+    },
+    {
+      "sig": "2PotCTq27sMEn9ZaPqBZH9dowbn2DgotcWkE65PsBRRVF37vLa1PcR8P8ExRm4zpFR3a5uBohWFio6tesMuBZPu2",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:46:58.000Z"
+    },
+    {
+      "sig": "bWHCwF8he79hiRfkgz26fqbEUmm3tyiBWrpXe7Q921N5oyAZC6oDocCjkpmWsCfGvtwfm9jNwH1gVUGcrH48G9N",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:46:02.000Z"
+    },
+    {
+      "sig": "4EryvVqheP9dPhndcgRCYdGZZkBfCmbL8LoYjWvgBr4eTf574BuwEVDfyZQab8f2PM1qVGvebV35in56B7UCLhe2",
+      "name": "validate_stat",
+      "cu": 193240,
+      "time": "2026-07-01T17:46:02.000Z"
+    },
+    {
+      "sig": "Y5hCkkBvH6YceXX3qY8uc7us9xXPUTgMfCHgsNd9DaMxErNKVEjrmTd7TX8Zb5UQdesP1KGYQ4pfaKXDapiTwrG",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:46:01.000Z"
+    },
+    {
+      "sig": "5EtfRSN89XcARGVxViHptVwzViGFBRRFuckQovFckyREP8T5FpsggzKwPNVvWtH1pc3pHmiMCzbzFAWGnQqANzbv",
+      "name": "validate_stat",
+      "cu": 193240,
+      "time": "2026-07-01T17:46:01.000Z"
+    },
+    {
+      "sig": "2DPv4vgCpoFcnoSiJcvH3sgQgDqm3gnEGeNEfbdf38N3zYACXJSotouF81QYS6nMQ3EvcqCr8CqWk8iYRKjxGmwR",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:44:02.000Z"
+    },
+    {
+      "sig": "3FaUBNk5tBaBN8SXjmc2yKbM68v8qGimuX27UPY5yQetGr6Qxc6mC9jS7muz9Las4NQ3UeZ75QQMH9j4piS6ZwpU",
+      "name": "validate_stat",
+      "cu": 193242,
+      "time": "2026-07-01T17:44:02.000Z"
+    },
+    {
+      "sig": "3yDPeQKTku31jUtuvuqZJmnYtq9Mcmt24hDTp71kgLsqxuVSPnvVRyFpcsD8Y3wd5es6mSyUXZQt5HFQRGWinxDS",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:44:02.000Z"
+    },
+    {
+      "sig": "4dD6DKyw8iUeRqjTH5Aa5dYEWrpEtBygjRV1F2PWiGxrrv3X95y6r8cQmcwNvBDxNcn1otULMHUNoKS2DZnhrL1E",
+      "name": "validate_stat",
+      "cu": 193242,
+      "time": "2026-07-01T17:44:02.000Z"
+    },
+    {
+      "sig": "9BBtmX6z8zHLKcqruCHkCxoUkH7g7DnX5Ru8e5UNubu8QkX9qjbNYaGRhbsKUtsXMuMv4E3BcjcZJJudUGk3RVu",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:44:02.000Z"
+    },
+    {
+      "sig": "3Tcxh8TgJEVgPZmsxgTNRaXMpyUP1bcHgG5mwmGLKi9YjRjefvDRZtQCwnx7tmTgozxJKRBCpX9vM5oErdkTQZub",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:44:01.000Z"
+    },
+    {
+      "sig": "38LKwpGwoSKNANC5QYfogKhd9GGj6K5s4v3EMUH5Cp3VAwLBvjrjic5g1E6wxhQbzYmn3eX735dzXTtLweD2uXuR",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:42:03.000Z"
+    },
+    {
+      "sig": "5uBBj6JNsn92BiFyPNVzZe1tSURVmz5nWyrs1YaPVfc6rqFL3HF7rpmebcW1pTY6XzBDSBgLbJ9Pjvz1giDvrMux",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:42:03.000Z"
+    },
+    {
+      "sig": "2qHFsDRD1c8pjsKLXXidr8idctKSYkAPK6jqNm3cLU8F66yDecjG4KXW7z1jxUxT8WWcEqbnjwNkdGr1z3gfpXfc",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:40:03.000Z"
+    },
+    {
+      "sig": "WA5MWo8L7jYCFjFDWY76W7LU8Z5L7A7MdtFnSiXXSBCwbzpFPSfsvzKLLEGLEvfujXsbGG8fS3FuD2pxZ8vKjEh",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:40:02.000Z"
+    },
+    {
+      "sig": "5tu5RjrBJANmHiKvZfyGFRqiG8xeTKWk2GuG3JUhPPyMzQr78MkhigKJMQRFVQYS3ApaqpyTEDQFBeCNmcZKkdwi",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:38:05.000Z"
+    },
+    {
+      "sig": "4f3MiycXnKPkRHjYxN1K2cgvpPZCbXXhpYCnaVRNEBNxmFBhx39B45mCfUKEoUkN5JqiFkhJuAXY2fA5sgrNTqsy",
+      "name": "validate_stat",
+      "cu": 206974,
+      "time": "2026-07-01T17:38:04.000Z"
+    },
+    {
+      "sig": "2H7c8AbbXuxmmSmQty9mPt318BFp2iQ5tnrpKGoiYdgANLaFpmTR2Ufqir2tiE6zMAdLHUraRC6cJuegf4d8QrXL",
+      "name": "validate_stat",
+      "cu": 193240,
+      "time": "2026-07-01T17:38:04.000Z"
+    },
+    {
+      "sig": "2G6rnX4pMz4VUtnpm2EYnHhtMJVYt3fynXmdE8NW6McGuL7r3TUxUTZvVz8oETFXAk851Kj5mPhreaamPbs8CaLn",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:38:04.000Z"
+    },
+    {
+      "sig": "2yhHntD48qMohvUe3xAevxG5vBtBvg6vnb3s3xC8nNvcw3RtJAqCAyvVRsANfYeRSrsTdNfatkjXCY6zubKSPX9z",
+      "name": "validate_stat",
+      "cu": 193240,
+      "time": "2026-07-01T17:38:02.000Z"
+    },
+    {
+      "sig": "28BtPNSRkTUdENso9cTD2xGC9n4rgyGZYxXAuyissGwwxTbSp4u4v3s5BT9UKdQHLJVEYGt6uuWV4R546QbjSTZT",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:36:03.000Z"
+    },
+    {
+      "sig": "3uz9sEMDDkpeUbnmYP4aP8tU7XCN3YMhdsKoDZA6WG6qUUkm2Et9bGrpGtWDzE2MB5n7NcPv7ZXquLZgVqtn92Nk",
+      "name": "validate_stat",
+      "cu": 193242,
+      "time": "2026-07-01T17:36:03.000Z"
+    },
+    {
+      "sig": "3Vh8V1aMsZmwvuxSgFR4ik8H5AbmuAcL1en4o4n3TaQ7a5HyxKVuSTfU4fZ6dRQ9DBQZu3U25rnv2EZ3ic52ZcwK",
+      "name": "validate_stat",
+      "cu": 124772,
+      "time": "2026-07-01T17:36:02.000Z"
+    },
+    {
+      "sig": "36i6rs3fDdgN2oAa4mwEA7KRPt8vFtWfFYHesvHjTt6ft9YtaBrsFq6niqNtHZoANzGQCJfMBLjHjbwDeJ4djaTJ",
+      "name": "validate_stat",
+      "cu": 193242,
+      "time": "2026-07-01T17:36:02.000Z"
+    },
+    {
+      "sig": "GjAMbgxyJKUJqf1zN7ujL3CLPT6FXhZVfNuoVQ7o6EeREL1CKMy87z7yXPekK9y3Y2hzoV2RSDbCNF6CKVWKrm5",
+      "name": "validate_stat",
+      "cu": 193244,
+      "time": "2026-07-01T17:34:06.000Z"
+    },
+    {
+      "sig": "92hKUgGvLknSpxAyHf4UU6JMN3UQ5hKAf3TB8wfwBQ7mVhFikcCPbHWxMnwTP1BurhuQvzze7CCEywGzwtkNG5e",
+      "name": "validate_stat",
+      "cu": 193246,
+      "time": "2026-07-01T17:34:06.000Z"
+    },
+    {
+      "sig": "43LFpZXN2fhQsvzLsgecEGfeJM5u5BXKQFYKhEGepsAbDsqoZAjFPeXhMoXsnu1D5CrccAVrCyNhyxmzVpBJiurX",
+      "name": "validate_stat",
+      "cu": 206976,
+      "time": "2026-07-01T17:34:02.000Z"
+    },
+    {
+      "sig": "66TbCmG7bGuxgW6BXYhDzGDqJSqUwWNVpeGdBbwgbBZmbaBewaaJZTKATZmc6eSWXDj6163CJuzodfKvSUaAH8Tz",
+      "name": "validate_stat",
+      "cu": 206974,
+      "time": "2026-07-01T17:34:02.000Z"
+    },
+    {
+      "sig": "27V8qidpuBeqRZT6GE9NPddhD66cpyrRcHoDKA4TJYG9hd5PCrmkkKanZvaNHsAQtWf6DWBpgGSeSgS9PtZMMQpA",
+      "name": "validate_stat",
+      "cu": 205456,
+      "time": "2026-07-01T17:03:17.000Z"
+    },
+    {
+      "sig": "3wWk1vEusemGkSANR9s9ZiaYZueTEkxHgNC1rDMgg16mMMBpE4r1EyrzBvZnaS8Ymr6fXbRbrAMh2mmqDgPcE8nU",
+      "name": "validate_stat",
+      "cu": 123010,
+      "time": "2026-07-01T17:03:16.000Z"
+    },
+    {
+      "sig": "2J8ZDjdeZVn4wdDTTUnm4JmSgfvX5Q6TZPBy7whQibs1uU4sViXreYX5cPK4q7hTcuocWhDiVRRPBnp1DdAuv56p",
+      "name": "validate_stat",
+      "cu": 141288,
+      "time": "2026-07-01T16:24:46.000Z"
+    },
+    {
+      "sig": "5pfpQhzKaoosBRKbkm9fzdgF6A9qFFDqN3E9rN8EsnEAA8kZhX3SM5H3aG1ADdpEHiMwSDWGngkT4tYaFBmT7rjB",
+      "name": "validate_stat",
+      "cu": 141286,
+      "time": "2026-07-01T16:24:45.000Z"
+    },
+    {
+      "sig": "2ZuN2wiQMoSw97HgQDqDqRu8nMnXc6whFnVKUaYAE8fkd2CwrmJenLhNUbXC3wbAX4u23CHm3hr6d76ATdm2gtQ2",
+      "name": "validate_stat",
+      "cu": 123010,
+      "time": "2026-07-01T16:23:25.000Z"
+    },
+    {
+      "sig": "5rbptTVhwY1WxWUeQzdKUno5hAcTjpuMqqkmXDfLWAv8sVwNuiqRAfV9fAeUogQnbwCuu874eiRQPWya1pyauEZ9",
+      "name": "validate_stat",
+      "cu": 123008,
+      "time": "2026-07-01T16:23:22.000Z"
+    },
+    {
+      "sig": "4VTF4J7ibkqV3MfZR5gHJx1pKKgQaC4nEZwNxPCsgSXADzdN9Hie1VkSDkibYy4m37FAPGDZYy2depJkUjwv9ZUN",
+      "name": "validate_stat",
+      "cu": 141286,
+      "time": "2026-07-01T15:55:33.000Z"
+    }
+  ]
+}

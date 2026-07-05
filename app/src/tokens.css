@@ -1,0 +1,73 @@
+/* DESIGN.md tokens: the only source of visual truth. */
+:root {
+  /* warm paper-and-ink ramp */
+  --g0: #fbfaf7;
+  --g1: #f4f2ec;
+  --g2: #e9e6dd;
+  --g3: #d6d2c4;
+  --g4: #b3aea0;
+  --g5: #8a8578;
+  --g6: #6b675c;
+  --g7: #4a4740;
+  --g8: #262420;
+  --g9: #141310;
+
+  /* one accent: pitch green, interactive/live/settled only */
+  --pitch: #1b7a3d;
+  --pitch-hover: #166332;
+  --pitch-tint: #eaf3ed;
+
+  --font-display: "IBM Plex Sans Condensed", sans-serif;
+  --font-body: "IBM Plex Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --shadow-ticket: 0 1px 2px rgb(20 19 16 / 0.06);
+  --shadow-moment: 0 4px 16px rgb(20 19 16 / 0.12);
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+html { background: var(--g0); }
+
+body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--g8);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--pitch-tint); }
+
+/* the three registers */
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--g9);
+  font-variant-numeric: tabular-nums;
+}
+.mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.microlabel {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--g6);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
+}
+
+input, select {
+  font: inherit;
+  border-radius: 2px;
+}

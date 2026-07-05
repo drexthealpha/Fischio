@@ -1,0 +1,82 @@
+import { useState } from "react";
+import { UPCOMING } from "./chain.js";
+import { FIXTURES as FALLBACK } from "./data.js";
+
+const list = UPCOMING.length
+  ? UPCOMING.map((f) => ({ id: f.id, home: f.home, away: f.away, kickoff: f.kickoff.slice(0, 16).replace("T", " ") + " UTC" }))
+  : FALLBACK;
+
+export default function CreateWager({ onCreate, busy = false, walletConnected = true }) {
+  const [fixtureId, setFixtureId] = useState(list[0]?.id);
+  const [side, setSide] = useState("home");
+  const [stake, setStake] = useState("0.01");
+
+  const fixture = list.find((f) => f.id === fixtureId) ?? list[0];
+  const backed = side === "home" ? fixture.home : fixture.away;
+  const opponent = side === "home" ? fixture.away : fixture.home;
+
+  return (
+    <section className="create">
+      <h2 className="display create-title">Open a wager</h2>
+
+      <label className="microlabel create-label" htmlFor="fixture">Fixture</label>
+      <select
+        id="fixture"
+        className="create-input"
+        value={fixtureId}
+        onChange={(e) => setFixtureId(Number(e.target.value))}
+      >
+        {list.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.home} v {f.away} · {f.kickoff}
+          </option>
+        ))}
+      </select>
+
+      <div className="microlabel create-label">Your side</div>
+      <div className="side-toggle" role="radiogroup">
+        <button
+          className={side === "home" ? "side-btn side-btn-on" : "side-btn"}
+          onClick={() => setSide("home")}
+          aria-pressed={side === "home"}
+        >
+          {fixture.home}
+        </button>
+        <button
+          className={side === "away" ? "side-btn side-btn-on" : "side-btn"}
+          onClick={() => setSide("away")}
+          aria-pressed={side === "away"}
+        >
+          {fixture.away}
+        </button>
+      </div>
+
+      <label className="microlabel create-label" htmlFor="stake">Stake (SOL, matched by taker)</label>
+      <input
+        id="stake"
+        className="create-input mono"
+        inputMode="decimal"
+        value={stake}
+        onChange={(e) => setStake(e.target.value)}
+      />
+
+      <p className="create-terms">
+        <strong>{backed} to beat {opponent}</strong>, settled on the 90&#8242;+extra-time
+        result. If the match goes to a penalty shootout, it counts as the taker&#8217;s
+        win, even if {backed} wins the shootout. Settlement is automatic, against the
+        TxLINE on-chain scores root.
+      </p>
+
+      <button
+        className="create-submit"
+        disabled={busy}
+        onClick={() => onCreate?.({ fixtureId, side, stake })}
+      >
+        {walletConnected
+          ? busy ? "Submitting…" : `Lock ${stake || "0"} SOL on ${backed}`
+          : "Connect a wallet to open a wager"}
+      </button>
+      <div className="create-fee mono">escrow: program vault · refund opens at expiry</div>
+    </section>
+  );
+}

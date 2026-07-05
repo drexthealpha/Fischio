@@ -1,0 +1,146 @@
+// ===== BLOCK 0 =====
+
+
+// ===== BLOCK 1 =====
+import * as anchor from "@coral-xyz/anchor";
+import type { Txoracle } from "./types/txoracle"; // Use the matching mainnet/devnet type
+import txoracleIdl from "./idl/txoracle.json"; // Use the matching mainnet/devnet IDL
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+} from "@solana/spl-token";
+import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
+import axios from "axios";
+import nacl from "tweetnacl";
+
+const NETWORK: "mainnet" | "devnet" = "devnet";
+
+const CONFIG = {
+  mainnet: {
+    rpcUrl: "https://api.mainnet-beta.solana.com",
+    apiOrigin: "https://txline.txodds.com",
+    programId: new PublicKey("9ExbZjAapQww1vfcisDmrngPinHTEfpjYRWMunJgcKaA"),
+    txlTokenMint: new PublicKey("Zhw9TVKp68a1QrftncMSd6ELXKDtpVMNuMGr1jNwdeL"),
+  },
+  devnet: {
+    rpcUrl: "https://api.devnet.solana.com",
+    apiOrigin: "https://txline-dev.txodds.com",
+    programId: new PublicKey("6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J"),
+    txlTokenMint: new PublicKey("4Zao8ocPhmMgq7PdsYWyxvqySMGx7xb9cMftPMkEokRG"),
+  },
+} as const;
+
+const { rpcUrl, apiOrigin, programId, txlTokenMint } = CONFIG[NETWORK];
+const apiBaseUrl = `${apiOrigin}/api`;
+
+const connection = new Connection(rpcUrl, "confirmed");
+const provider = new anchor.AnchorProvider(connection, wallet, {
+  commitment: "confirmed",
+});
+anchor.setProvider(provider);
+
+const program = new anchor.Program<Txoracle>(
+  txoracleIdl as Txoracle,
+  provider
+);
+
+if (!program.programId.equals(programId)) {
+  throw new Error(
+    `Loaded IDL program ${program.programId.toBase58()} does not match ${NETWORK} program ${programId.toBase58()}`
+  );
+
+// ===== BLOCK 2 =====
+// Free tier configuration - choose one:
+const SERVICE_LEVEL_ID = 1;  // World Cup & Int Friendlies (60-second delay)
+// const SERVICE_LEVEL_ID = 12; // Mainnet real-time World Cup & Int Friendlies
+const DURATION_WEEKS = 4; // Subscribe for 4 weeks at a time
+const SELECTED_LEAGUES: number[] = []; // Empty for standard bundle
+
+const [tokenTreasuryPda] = PublicKey.findProgramAddressSync(
+  [Buffer.from("token_treasury_v2")],
+  program.programId
+);
+
+const tokenTreasuryVault = getAssociatedTokenAddressSync(
+  txlTokenMint,
+  tokenTreasuryPda,
+  true,
+  TOKEN_2022_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID
+);
+
+const [pricingMatrixPda] = PublicKey.findProgramAddressSync(
+  [Buffer.from("pricing_matrix")],
+  program.programId
+);
+
+const userTokenAccount = getAssociatedTokenAddressSync(
+  txlTokenMint,
+  provider.wallet.publicKey,
+  false,
+  TOKEN_2022_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID
+);
+
+// Subscribe on-chain
+const txSig = await program.methods
+  .subscribe(SERVICE_LEVEL_ID, DURATION_WEEKS)
+  .accounts({
+    user: provider.wallet.publicKey,
+    pricingMatrix: pricingMatrixPda,
+    tokenMint: txlTokenMint,
+    userTokenAccount,
+    tokenTreasuryVault,
+    tokenTreasuryPda,
+    tokenProgram: TOKEN_2022_PROGRAM_ID,
+    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+    systemProgram: SystemProgram.programId,
+  })
+  .rpc();
+
+
+// ===== BLOCK 3 =====
+// Get guest authentication token
+const authResponse = await axios.post(`${apiOrigin}/auth/guest/start`);
+const jwt = authResponse.data.token;
+
+// Create message to sign
+const messageString = `${txSig}:${SELECTED_LEAGUES.join(",")}:${jwt}`;
+const message = new TextEncoder().encode(messageString);
+
+// For SELECTED_LEAGUES = [], this signs `${txSig}::${jwt}`.
+async function signActivationMessage(message: Uint8Array): Promise<Uint8Array> {
+  if ("signMessage" in wallet && wallet.signMessage) {
+    return wallet.signMessage(message);
+  }
+
+  const localPayer = (provider.wallet as anchor.Wallet & {
+    payer?: anchor.web3.Keypair;
+  }).payer;
+
+  if (localPayer) {
+    return nacl.sign.detached(message, localPayer.secretKey);
+  }
+
+  throw new Error("Wallet must support signMessage, or run with a local Anchor payer.");
+}
+
+const signatureBytes = await signActivationMessage(message);
+const walletSignature = Buffer.from(signatureBytes).toString("base64");
+
+// Activate your API access
+const activationResponse = await axios.post(
+  `${apiBaseUrl}/token/activate`,
+  {
+    txSig,
+    walletSignature,
+    leagues: SELECTED_LEAGUES,
+  },
+  {
+    headers: { Authorization: `Bearer ${jwt}` }
+  }
+);
+
+// Save your API token
+const apiToken = activationResponse.data.token || activationResponse.data;

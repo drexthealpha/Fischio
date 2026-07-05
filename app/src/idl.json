@@ -1,0 +1,831 @@
+{
+  "address": "FVVSa2AcwxBdmtKxFHiZMmd2ceRWorh7ZDdppvPsPvxb",
+  "metadata": {
+    "name": "wc_settle",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Permissionless proof-based settlement of World Cup wagers via TxLINE validate_stat"
+  },
+  "instructions": [
+    {
+      "name": "accept_wager",
+      "docs": [
+        "Taker matches the maker's stake against the stored terms: Open -> Active."
+      ],
+      "discriminator": [
+        214,
+        18,
+        178,
+        214,
+        203,
+        22,
+        50,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "taker",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wager",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "wager.maker",
+                "account": "Wager"
+              },
+              {
+                "kind": "account",
+                "path": "wager.wager_id",
+                "account": "Wager"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "wager"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_wager",
+      "docs": [
+        "Maker opens a wager: locks `stake_lamports` against `terms` until `expiry_ts`."
+      ],
+      "discriminator": [
+        210,
+        82,
+        178,
+        75,
+        253,
+        34,
+        84,
+        120
+      ],
+      "accounts": [
+        {
+          "name": "maker",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wager",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "maker"
+              },
+              {
+                "kind": "arg",
+                "path": "wager_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "wager"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "wager_id",
+          "type": "u64"
+        },
+        {
+          "name": "terms",
+          "type": {
+            "defined": {
+              "name": "WagerTerms"
+            }
+          }
+        },
+        {
+          "name": "stake_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "expiry_ts",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "refund",
+      "docs": [
+        "Timeout path, permissionless like settle: after expiry_ts, anyone can return",
+        "the stakes to their owners. Open -> maker only; Active -> both sides.",
+        "Covers abandoned wagers and the RootNotAvailable scenario (oracle never posts",
+        "a terminal proof for the fixture)."
+      ],
+      "discriminator": [
+        2,
+        96,
+        183,
+        251,
+        63,
+        208,
+        46,
+        46
+      ],
+      "accounts": [
+        {
+          "name": "wager",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "wager.maker",
+                "account": "Wager"
+              },
+              {
+                "kind": "account",
+                "path": "wager.wager_id",
+                "account": "Wager"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "wager"
+              }
+            ]
+          }
+        },
+        {
+          "name": "maker",
+          "writable": true
+        },
+        {
+          "name": "taker",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "settle",
+      "docs": [
+        "PERMISSIONLESS settlement. Any signer may submit the TxLINE proof bundle.",
+        "",
+        "Safety model, in order:",
+        "1. The proof must be about the wagered fixture and the wagered stat keys.",
+        "2. FINALITY GUARD: the proven leaves must carry a terminal game phase",
+        "(period ∈ {5 FT, 10 after-ET}) — period=0 running totals and all in-play",
+        "phases are rejected. Period is inside the hashed leaf, so a submitter",
+        "cannot relabel a mid-match proof (verified: relabel → InvalidStatProof).",
+        "3. The predicate evaluated on-chain comes from the STORED terms, never from",
+        "the submitter.",
+        "4. txoracle re-verifies the whole Merkle path against its oracle root; any",
+        "forgery aborts the transaction inside the CPI.",
+        "5. State flips to Settled before a single lamport moves."
+      ],
+      "discriminator": [
+        175,
+        42,
+        185,
+        87,
+        144,
+        131,
+        102,
+        212
+      ],
+      "accounts": [
+        {
+          "name": "settler",
+          "docs": [
+            "Anyone. Receives SETTLER_TIP_LAMPORTS from the pot for landing the proof."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wager",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "wager.maker",
+                "account": "Wager"
+              },
+              {
+                "kind": "account",
+                "path": "wager.wager_id",
+                "account": "Wager"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "wager"
+              }
+            ]
+          }
+        },
+        {
+          "name": "maker",
+          "writable": true
+        },
+        {
+          "name": "taker",
+          "writable": true
+        },
+        {
+          "name": "daily_scores_roots",
+          "docs": [
+            "epoch day derived from the submitted proof; contents verified by validate_stat."
+          ]
+        },
+        {
+          "name": "txoracle_program",
+          "address": "6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "fixture_summary",
+          "type": {
+            "defined": {
+              "name": "ScoresBatchSummary"
+            }
+          }
+        },
+        {
+          "name": "fixture_proof",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "ProofNode"
+              }
+            }
+          }
+        },
+        {
+          "name": "main_tree_proof",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "ProofNode"
+              }
+            }
+          }
+        },
+        {
+          "name": "stat_a",
+          "type": {
+            "defined": {
+              "name": "StatTerm"
+            }
+          }
+        },
+        {
+          "name": "stat_b",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "StatTerm"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Wager",
+      "discriminator": [
+        3,
+        110,
+        53,
+        190,
+        113,
+        31,
+        230,
+        40
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "StakeTooSmall",
+      "msg": "Stake below minimum"
+    },
+    {
+      "code": 6001,
+      "name": "ExpiryInPast",
+      "msg": "Expiry must be in the future"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidTerms",
+      "msg": "Terms are not a predicate validate_stat can evaluate"
+    },
+    {
+      "code": 6003,
+      "name": "WagerNotOpen",
+      "msg": "Wager is not open for acceptance"
+    },
+    {
+      "code": 6004,
+      "name": "WagerNotActive",
+      "msg": "Wager is not active"
+    },
+    {
+      "code": 6005,
+      "name": "FixtureMismatch",
+      "msg": "Proof is for a different fixture"
+    },
+    {
+      "code": 6006,
+      "name": "StatKeyMismatch",
+      "msg": "Proven stat keys do not match wager terms"
+    },
+    {
+      "code": 6007,
+      "name": "NonTerminalPeriod",
+      "msg": "Proven stat is not from a terminal game phase (match not ended)"
+    },
+    {
+      "code": 6008,
+      "name": "PeriodMismatch",
+      "msg": "Both stats must be proven at the same terminal phase"
+    },
+    {
+      "code": 6009,
+      "name": "EventRootMismatch",
+      "msg": "Both stats must come from the same event snapshot"
+    },
+    {
+      "code": 6010,
+      "name": "EpochDayOutOfRange",
+      "msg": "Epoch day out of range"
+    },
+    {
+      "code": 6011,
+      "name": "WrongDailyRootsAccount",
+      "msg": "Not the canonical txoracle daily scores roots PDA for this epoch day"
+    },
+    {
+      "code": 6012,
+      "name": "MissingOracleReturn",
+      "msg": "txoracle returned no verdict"
+    },
+    {
+      "code": 6013,
+      "name": "NotExpired",
+      "msg": "Wager not yet expired"
+    },
+    {
+      "code": 6014,
+      "name": "WagerNotRefundable",
+      "msg": "Wager already settled or refunded"
+    }
+  ],
+  "types": [
+    {
+      "name": "BinaryExpression",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Add"
+          },
+          {
+            "name": "Subtract"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Comparison",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "GreaterThan"
+          },
+          {
+            "name": "LessThan"
+          },
+          {
+            "name": "EqualTo"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProofNode",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "is_right_sibling",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScoreStat",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": "u32"
+          },
+          {
+            "name": "value",
+            "type": "i32"
+          },
+          {
+            "name": "period",
+            "type": "i32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScoresBatchSummary",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fixture_id",
+            "type": "i64"
+          },
+          {
+            "name": "update_stats",
+            "type": {
+              "defined": {
+                "name": "ScoresUpdateStats"
+              }
+            }
+          },
+          {
+            "name": "events_sub_tree_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScoresUpdateStats",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "update_count",
+            "type": "i32"
+          },
+          {
+            "name": "min_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "max_timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StatTerm",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "stat_to_prove",
+            "type": {
+              "defined": {
+                "name": "ScoreStat"
+              }
+            }
+          },
+          {
+            "name": "event_stat_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "stat_proof",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProofNode"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TraderPredicate",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold",
+            "type": "i32"
+          },
+          {
+            "name": "comparison",
+            "type": {
+              "defined": {
+                "name": "Comparison"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Wager",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "maker",
+            "type": "pubkey"
+          },
+          {
+            "name": "taker",
+            "type": "pubkey"
+          },
+          {
+            "name": "stake_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "terms",
+            "type": {
+              "defined": {
+                "name": "WagerTerms"
+              }
+            }
+          },
+          {
+            "name": "terms_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "WagerState"
+              }
+            }
+          },
+          {
+            "name": "expiry_ts",
+            "type": "i64"
+          },
+          {
+            "name": "wager_id",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WagerState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Open"
+          },
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Settled"
+          },
+          {
+            "name": "Refunded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WagerTerms",
+      "docs": [
+        "What the wager is about, in txoracle's own vocabulary so terms translate 1:1",
+        "into validate_stat args at settlement. Predicate TRUE ⇒ maker wins, FALSE ⇒ taker.",
+        "",
+        "v1 MARKET MEANING (locked): a wager is \"maker's side of the predicate holds at the",
+        "final whistle of 90 minutes or extra time\" — penalties are EXCLUDED. Goal totals at",
+        "terminal phases 5/10 include ET goals but never shootout goals, so under",
+        "{ Subtract, GreaterThan 0 } terms an ET draw evaluates FALSE and pays the taker,",
+        "even if the maker's team later wins the shootout. Encode markets accordingly.",
+        "Example \"P1 beats P2 (90'+ET)\": stat_a_key=1, stat_b_key=2, op=Subtract,",
+        "predicate = { threshold: 0, comparison: GreaterThan }."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fixture_id",
+            "type": "i64"
+          },
+          {
+            "name": "stat_a_key",
+            "type": "u32"
+          },
+          {
+            "name": "stat_b_key",
+            "type": {
+              "option": "u32"
+            }
+          },
+          {
+            "name": "op",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "BinaryExpression"
+                }
+              }
+            }
+          },
+          {
+            "name": "predicate",
+            "type": {
+              "defined": {
+                "name": "TraderPredicate"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

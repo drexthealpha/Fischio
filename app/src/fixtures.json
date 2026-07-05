@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-07-04T16:17:23.396Z",
+  "fixtures": [
+    {
+      "id": 18172280,
+      "home": "Netherlands",
+      "away": "Morocco",
+      "kickoff": "2026-06-30T01:00:00.000Z"
+    },
+    {
+      "id": 18175397,
+      "home": "Ivory Coast",
+      "away": "Norway",
+      "kickoff": "2026-06-30T17:00:00.000Z"
+    },
+    {
+      "id": 18175981,
+      "home": "France",
+      "away": "Sweden",
+      "kickoff": "2026-06-30T21:00:00.000Z"
+    },
+    {
+      "id": 18179759,
+      "home": "Mexico",
+      "away": "Ecuador",
+      "kickoff": "2026-07-01T02:00:00.000Z"
+    },
+    {
+      "id": 18179764,
+      "home": "England",
+      "away": "Congo DR",
+      "kickoff": "2026-07-01T16:00:00.000Z"
+    },
+    {
+      "id": 18179550,
+      "home": "Belgium",
+      "away": "Senegal",
+      "kickoff": "2026-07-01T20:00:00.000Z"
+    },
+    {
+      "id": 18172379,
+      "home": "USA",
+      "away": "Bosnia & Herzegovina",
+      "kickoff": "2026-07-02T00:00:00.000Z"
+    },
+    {
+      "id": 18179551,
+      "home": "Spain",
+      "away": "Austria",
+      "kickoff": "2026-07-02T19:00:00.000Z"
+    },
+    {
+      "id": 18179763,
+      "home": "Portugal",
+      "away": "Croatia",
+      "kickoff": "2026-07-02T23:00:00.000Z"
+    },
+    {
+      "id": 18179552,
+      "home": "Switzerland",
+      "away": "Algeria",
+      "kickoff": "2026-07-03T03:00:00.000Z"
+    },
+    {
+      "id": 18176123,
+      "home": "Australia",
+      "away": "Egypt",
+      "kickoff": "2026-07-03T18:00:00.000Z"
+    },
+    {
+      "id": 18175918,
+      "home": "Argentina",
+      "away": "Cape Verde",
+      "kickoff": "2026-07-03T22:00:00.000Z"
+    },
+    {
+      "id": 18179549,
+      "home": "Colombia",
+      "away": "Ghana",
+      "kickoff": "2026-07-04T01:30:00.000Z"
+    },
+    {
+      "id": 18185036,
+      "home": "Canada",
+      "away": "Morocco",
+      "kickoff": "2026-07-04T17:00:00.000Z"
+    },
+    {
+      "id": 18188721,
+      "home": "Paraguay",
+      "away": "France",
+      "kickoff": "2026-07-04T21:00:00.000Z"
+    },
+    {
+      "id": 18187298,
+      "home": "Brazil",
+      "away": "Norway",
+      "kickoff": "2026-07-05T20:00:00.000Z"
+    },
+    {
+      "id": 18192996,
+      "home": "Mexico",
+      "away": "England",
+      "kickoff": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": 18198205,
+      "home": "Portugal",
+      "away": "Spain",
+      "kickoff": "2026-07-06T19:00:00.000Z"
+    },
+    {
+      "id": 18193785,
+      "home": "USA",
+      "away": "Belgium",
+      "kickoff": "2026-07-07T00:00:00.000Z"
+    },
+    {
+      "id": 18202701,
+      "home": "Argentina",
+      "away": "Egypt",
+      "kickoff": "2026-07-07T16:00:00.000Z"
+    },
+    {
+      "id": 18202783,
+      "home": "Switzerland",
+      "away": "Colombia",
+      "kickoff": "2026-07-07T20:00:00.000Z"
+    }
+  ]
+}

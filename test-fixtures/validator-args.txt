@@ -1,0 +1,1 @@
+--bpf-program 6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J test-fixtures/txoracle.so --account FNLRxCxRf3idEDyixYg8uHj9xEVJSuqHvStxwRHf7k6e test-fixtures/roots-20636.json --account 69SexUQvQ9uNpyx6bgDLVoQ5uKkbn3uRxZXCJ5KVZ7QL test-fixtures/roots-20635.json
