@@ -1,0 +1,23 @@
+[package]
+name = "fischio-exchange"
+version = "0.1.0"
+description = "Fully on-chain, permissionless central limit order book for proof-settled prediction markets"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "fischio_exchange"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = "0.31.1"
+anchor-spl = "0.31.1"
+# zero-copy account arrays need Pod/Zeroable derives and const-generic array support
+bytemuck = { version = "1", features = ["derive", "min_const_generics"] }

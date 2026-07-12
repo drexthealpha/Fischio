@@ -69,12 +69,7 @@ export default function CreateWager({ onCreate, busy = false, walletConnected = 
         onChange={(e) => setStake(e.target.value)}
       />
 
-      <p className="create-terms">
-        <strong>{backed} to beat {opponent}</strong>, settled on the 90&#8242;+extra-time
-        result. If the match goes to a penalty shootout, it counts as the taker&#8217;s
-        win, even if {backed} wins the shootout. Settlement is automatic, against the
-        TxLINE on-chain scores root.
-      </p>
+      <p className="create-terms"><strong>{backed} to beat {opponent}</strong> in 90 minutes or extra time. Penalties count as a loss.</p>
 
       <button
         className="create-submit"

@@ -14,6 +14,7 @@ import "@fontsource/jetbrains-mono/500.css";
 import "./tokens.css";
 import App from "./App.jsx";
 import { RPC } from "./chain.js";
+import { WalletBridgeProvider } from "./walletBridge.jsx";
 
 // Wallets that register as Standard Wallets (Phantom, Solflare, Backpack) are
 // auto-detected; no adapter list needed.
@@ -22,7 +23,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <ConnectionProvider endpoint={RPC}>
       <WalletProvider wallets={[]} autoConnect>
         <WalletModalProvider>
-          <App />
+          <WalletBridgeProvider>
+            <App />
+          </WalletBridgeProvider>
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

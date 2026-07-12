@@ -1,0 +1,1087 @@
+{
+  "address": "8zVnp7ivs5fSdmjYFHTLChrSzbKnDeKX6mj5nuP1CAgg",
+  "metadata": {
+    "name": "fischio_multi",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Multi-outcome (NegRisk) prediction market with capital-efficient convert and proof settlement"
+  },
+  "instructions": [
+    {
+      "name": "convert",
+      "docs": [
+        "NegRisk convert: burn `amount` NO on every outcome in `index_set` (size k >= 2),",
+        "mint `amount` YES on every outcome NOT in the set, and release (k-1)*amount",
+        "collateral. This is the capital-efficient primitive: holding NO on many outcomes",
+        "nets down to far less collateral. Solvency is preserved (proven in `negrisk`).",
+        "",
+        "remaining_accounts, in order: [no_mint_i, user_no_i] for each i in the set, then",
+        "[yes_mint_j, user_yes_j] for each j in the complement (ascending)."
+      ],
+      "discriminator": [
+        122,
+        80,
+        212,
+        208,
+        92,
+        200,
+        34,
+        161
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "market",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  117,
+                  108,
+                  116,
+                  105
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.creator",
+                "account": "MultiMarket"
+              },
+              {
+                "kind": "account",
+                "path": "market.market_id",
+                "account": "MultiMarket"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_collateral",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "index_set",
+          "type": "bytes"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "create_multi_market",
+      "docs": [
+        "Create a market with N mutually-exclusive outcomes. Each outcome's predicate is",
+        "evaluated against the same combined stat at resolution; exactly one must hold."
+      ],
+      "discriminator": [
+        254,
+        236,
+        68,
+        238,
+        3,
+        131,
+        116,
+        194
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  117,
+                  108,
+                  116,
+                  105
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "market_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "collateral_mint"
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "market_id",
+          "type": "u64"
+        },
+        {
+          "name": "fixture_id",
+          "type": "i64"
+        },
+        {
+          "name": "num_outcomes",
+          "type": "u8"
+        },
+        {
+          "name": "stat_a_key",
+          "type": "u32"
+        },
+        {
+          "name": "stat_b_key",
+          "type": "u32"
+        },
+        {
+          "name": "op_is_subtract",
+          "type": "bool"
+        },
+        {
+          "name": "predicates",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "OutcomePredicate"
+              }
+            }
+          }
+        },
+        {
+          "name": "close_ts",
+          "type": "i64"
+        },
+        {
+          "name": "expiry_ts",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "init_outcome",
+      "docs": [
+        "Create the YES and NO mints for one outcome. Called once per outcome."
+      ],
+      "discriminator": [
+        245,
+        63,
+        147,
+        121,
+        117,
+        197,
+        145,
+        81
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  117,
+                  108,
+                  116,
+                  105
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.creator",
+                "account": "MultiMarket"
+              },
+              {
+                "kind": "account",
+                "path": "market.market_id",
+                "account": "MultiMarket"
+              }
+            ]
+          }
+        },
+        {
+          "name": "yes_mint",
+          "writable": true
+        },
+        {
+          "name": "no_mint",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "merge",
+      "docs": [
+        "Merge `amount` YES_i + `amount` NO_i back into `amount` collateral."
+      ],
+      "discriminator": [
+        148,
+        141,
+        236,
+        47,
+        174,
+        126,
+        69,
+        111
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "market",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  117,
+                  108,
+                  116,
+                  105
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.creator",
+                "account": "MultiMarket"
+              },
+              {
+                "kind": "account",
+                "path": "market.market_id",
+                "account": "MultiMarket"
+              }
+            ]
+          }
+        },
+        {
+          "name": "yes_mint",
+          "writable": true
+        },
+        {
+          "name": "no_mint",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_collateral",
+          "writable": true
+        },
+        {
+          "name": "user_yes",
+          "writable": true
+        },
+        {
+          "name": "user_no",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "redeem",
+      "docs": [
+        "Redeem a winning token for collateral. YES on the winning outcome pays 1 each; NO",
+        "on any losing outcome pays 1 each. Everything else is worthless."
+      ],
+      "discriminator": [
+        184,
+        12,
+        86,
+        149,
+        70,
+        196,
+        97,
+        225
+      ],
+      "accounts": [
+        {
+          "name": "redeemer",
+          "signer": true
+        },
+        {
+          "name": "market",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  117,
+                  108,
+                  116,
+                  105
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.creator",
+                "account": "MultiMarket"
+              },
+              {
+                "kind": "account",
+                "path": "market.market_id",
+                "account": "MultiMarket"
+              }
+            ]
+          }
+        },
+        {
+          "name": "outcome_mint",
+          "writable": true
+        },
+        {
+          "name": "redeemer_outcome",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              }
+            ]
+          }
+        },
+        {
+          "name": "redeemer_collateral",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "is_yes",
+          "type": "bool"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "resolve",
+      "docs": [
+        "Resolve by proof. One CPI into validate_stat proves the final stats are genuine;",
+        "the program then picks the single outcome whose predicate holds. Permissionless."
+      ],
+      "discriminator": [
+        246,
+        150,
+        236,
+        206,
+        108,
+        63,
+        58,
+        10
+      ],
+      "accounts": [
+        {
+          "name": "resolver",
+          "signer": true
+        },
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  117,
+                  108,
+                  116,
+                  105
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.creator",
+                "account": "MultiMarket"
+              },
+              {
+                "kind": "account",
+                "path": "market.market_id",
+                "account": "MultiMarket"
+              }
+            ]
+          }
+        },
+        {
+          "name": "daily_scores_roots"
+        },
+        {
+          "name": "txoracle_program",
+          "address": "6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J"
+        }
+      ],
+      "args": [
+        {
+          "name": "fixture_summary",
+          "type": {
+            "defined": {
+              "name": "ScoresBatchSummary"
+            }
+          }
+        },
+        {
+          "name": "fixture_proof",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "ProofNode"
+              }
+            }
+          }
+        },
+        {
+          "name": "main_tree_proof",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "ProofNode"
+              }
+            }
+          }
+        },
+        {
+          "name": "stat_a",
+          "type": {
+            "defined": {
+              "name": "StatTerm"
+            }
+          }
+        },
+        {
+          "name": "stat_b",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "StatTerm"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "split",
+      "docs": [
+        "Split `amount` collateral into `amount` YES_i + `amount` NO_i."
+      ],
+      "discriminator": [
+        124,
+        189,
+        27,
+        43,
+        216,
+        40,
+        147,
+        66
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "market",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  117,
+                  108,
+                  116,
+                  105
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.creator",
+                "account": "MultiMarket"
+              },
+              {
+                "kind": "account",
+                "path": "market.market_id",
+                "account": "MultiMarket"
+              }
+            ]
+          }
+        },
+        {
+          "name": "yes_mint",
+          "writable": true
+        },
+        {
+          "name": "no_mint",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_collateral",
+          "writable": true
+        },
+        {
+          "name": "user_yes",
+          "writable": true
+        },
+        {
+          "name": "user_no",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "MultiMarket",
+      "discriminator": [
+        194,
+        109,
+        22,
+        219,
+        218,
+        146,
+        190,
+        236
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "MissingOracleReturn",
+      "msg": "txoracle returned no verdict"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidTerms",
+      "msg": "Invalid market terms"
+    },
+    {
+      "code": 6002,
+      "name": "MarketNotTrading",
+      "msg": "Market is not trading"
+    },
+    {
+      "code": 6003,
+      "name": "MarketClosed",
+      "msg": "Market has closed"
+    },
+    {
+      "code": 6004,
+      "name": "AlreadyResolved",
+      "msg": "Market already resolved"
+    },
+    {
+      "code": 6005,
+      "name": "NotResolved",
+      "msg": "Market is not resolved"
+    },
+    {
+      "code": 6006,
+      "name": "NotExpired",
+      "msg": "Market has not expired"
+    },
+    {
+      "code": 6007,
+      "name": "FixtureMismatch",
+      "msg": "Proof is for a different fixture"
+    },
+    {
+      "code": 6008,
+      "name": "StatKeyMismatch",
+      "msg": "Proven stat keys do not match market terms"
+    },
+    {
+      "code": 6009,
+      "name": "NonTerminalPeriod",
+      "msg": "Proven stat is not from a terminal game phase"
+    },
+    {
+      "code": 6010,
+      "name": "EpochDayOutOfRange",
+      "msg": "Epoch day out of range"
+    },
+    {
+      "code": 6011,
+      "name": "WrongDailyRootsAccount",
+      "msg": "Not the canonical txoracle roots PDA"
+    },
+    {
+      "code": 6012,
+      "name": "ZeroAmount",
+      "msg": "Amount must be greater than zero"
+    },
+    {
+      "code": 6013,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6014,
+      "name": "NoWinningOutcome",
+      "msg": "No outcome predicate held; market cannot resolve"
+    },
+    {
+      "code": 6015,
+      "name": "MultipleWinners",
+      "msg": "More than one outcome predicate held"
+    },
+    {
+      "code": 6016,
+      "name": "WrongOutcomeMint",
+      "msg": "Outcome mint does not match the index and side"
+    },
+    {
+      "code": 6017,
+      "name": "WorthlessShare",
+      "msg": "This share is worthless"
+    },
+    {
+      "code": 6018,
+      "name": "BadOutcomeIndex",
+      "msg": "Outcome index out of range"
+    },
+    {
+      "code": 6019,
+      "name": "WrongRemainingAccounts",
+      "msg": "Wrong number of remaining accounts for the convert set"
+    }
+  ],
+  "types": [
+    {
+      "name": "MultiMarket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "market_id",
+            "type": "u64"
+          },
+          {
+            "name": "fixture_id",
+            "type": "i64"
+          },
+          {
+            "name": "num_outcomes",
+            "type": "u8"
+          },
+          {
+            "name": "stat_a_key",
+            "type": "u32"
+          },
+          {
+            "name": "stat_b_key",
+            "type": "u32"
+          },
+          {
+            "name": "op_is_subtract",
+            "type": "bool"
+          },
+          {
+            "name": "collateral_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "close_ts",
+            "type": "i64"
+          },
+          {
+            "name": "expiry_ts",
+            "type": "i64"
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "MultiState"
+              }
+            }
+          },
+          {
+            "name": "winning_outcome",
+            "type": "u8"
+          },
+          {
+            "name": "predicates",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "OutcomePredicate"
+                }
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MultiState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Trading"
+          },
+          {
+            "name": "Resolved"
+          },
+          {
+            "name": "Voided"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OutcomePredicate",
+      "docs": [
+        "How one outcome resolves: the combined stat (a, or a op b) compared to a threshold.",
+        "The same two stats feed every outcome; only the comparison differs, so a 3-way match",
+        "result is {a-b > 0}, {a-b == 0}, {a-b < 0}."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold",
+            "type": "i32"
+          },
+          {
+            "name": "comparison",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProofNode",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "is_right_sibling",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScoreStat",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": "u32"
+          },
+          {
+            "name": "value",
+            "type": "i32"
+          },
+          {
+            "name": "period",
+            "type": "i32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScoresBatchSummary",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fixture_id",
+            "type": "i64"
+          },
+          {
+            "name": "update_stats",
+            "type": {
+              "defined": {
+                "name": "ScoresUpdateStats"
+              }
+            }
+          },
+          {
+            "name": "events_sub_tree_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScoresUpdateStats",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "update_count",
+            "type": "i32"
+          },
+          {
+            "name": "min_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "max_timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StatTerm",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "stat_to_prove",
+            "type": {
+              "defined": {
+                "name": "ScoreStat"
+              }
+            }
+          },
+          {
+            "name": "event_stat_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "stat_proof",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProofNode"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

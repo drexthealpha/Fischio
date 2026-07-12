@@ -7,7 +7,7 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import Ticket from "./Ticket.jsx";
 import { fetchLatestSettlement } from "./chain.js";
 
-export default function Landing({ onBrowse }) {
+export default function Landing({ onBrowse, onInstant }) {
   const [latest, setLatest] = useState(undefined);
   useEffect(() => {
     fetchLatestSettlement().then(setLatest).catch(() => setLatest(null));
@@ -17,13 +17,17 @@ export default function Landing({ onBrowse }) {
     <div className="landing">
       <h1 className="display landing-title">Bets that settle themselves.</h1>
       <p className="landing-sub">
-        Two-party football wagers, escrowed on Solana. At the final whistle a
-        cryptographic proof of the score releases the pot: no bookmaker grades it,
-        no oracle admin signs it, no support ticket decides it. Your wallet is your
-        account; your ticket is on-chain state.
+        Two people lock funds on a football match. When the match ends, fischio checks
+        the final score against a signed proof from TxLINE and pays the winner. No
+        bookmaker holds your money, and no operator has to approve the payout.
       </p>
       <div className="landing-cta">
         <WalletMultiButton />
+        {onInstant && (
+          <button className="landing-instant" onClick={onInstant}>
+            start instantly, no wallet or SOL needed
+          </button>
+        )}
         <button className="landing-browse" onClick={onBrowse}>
           browse markets first
         </button>

@@ -6,7 +6,9 @@ import idl from "./idl.json";
 import fixturesFile from "./fixtures.json";
 
 const params = new URLSearchParams(window.location.search);
-export const RPC = params.get("rpc") ?? "https://api.devnet.solana.com";
+// RPC precedence: ?rpc= override, then VITE_RPC from .env.local (a paid endpoint like Alchemy,
+// kept out of the committed source), then the throttled public devnet as a last resort.
+export const RPC = params.get("rpc") ?? import.meta.env.VITE_RPC ?? "https://api.devnet.solana.com";
 export const connection = new Connection(RPC, "confirmed");
 
 export const FIXTURES_BY_ID = new Map(fixturesFile.fixtures.map((f) => [f.id, f]));
@@ -34,8 +36,8 @@ export function toTicket(pubkey, acc) {
   return {
     address: pubkey.toBase58(),
     fixtureId,
-    home: fx?.home ?? `P1 · fixture ${fixtureId}`,
-    away: fx?.away ?? "P2",
+    home: fx?.home ?? "Home",
+    away: fx?.away ?? "Away",
     kickoff: fx ? fmtKickoff(fx.kickoff) : "",
     finalScore: null,
     maker: acc.maker.toBase58(),

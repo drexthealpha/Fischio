@@ -1,4 +1,5 @@
 import { lamportsToSol, shortKey } from "./data.js";
+import Flag from "./Flag.jsx";
 import Barcode from "./Barcode.jsx";
 import SolLink from "./SolLink.jsx";
 
@@ -31,7 +32,7 @@ export default function Ticket({ wager, live }) {
       {/* scoreboard register */}
       <header className="ticket-board">
         <div className="board-row">
-          <span className="display board-team">{wager.home}</span>
+          <span className="display board-team"><Flag team={wager.home} size={22} /> {wager.home}</span>
           {wager.finalScore ? (
             <span className="display board-score">
               {wager.finalScore[0]}–{wager.finalScore[1]}
@@ -43,7 +44,7 @@ export default function Ticket({ wager, live }) {
           ) : (
             <span className="display board-score board-score-tbd">v</span>
           )}
-          <span className="display board-team board-team-away">{wager.away}</span>
+          <span className="display board-team board-team-away">{wager.away} <Flag team={wager.away} size={22} /></span>
         </div>
         <div className="board-meta mono">
           {settled && <span className="board-ft">FT</span>}
@@ -61,26 +62,21 @@ export default function Ticket({ wager, live }) {
         </div>
       </header>
 
-      {/* the bet, in plain football English */}
-      <p className="ticket-terms">
-        <strong>{wager.home} to beat {wager.away}</strong>: 90 minutes + extra time,
-        penalties excluded. Maker wins if the predicate holds at the final whistle;
-        otherwise the taker collects (a shootout counts as the taker&#8217;s win).
-      </p>
+      <p className="ticket-terms"><strong>{wager.home} to beat {wager.away}</strong></p>
 
       <div className="ticket-fields">
-        <Field label="Maker · backs the bet">
+        <Field label={`Backing ${wager.home}`}>
           <SolLink account={wager.maker}>{shortKey(wager.maker)}</SolLink>
         </Field>
-        <Field label="Taker · against">
+        <Field label="Against">
           {wager.state === "open" ? (
-            "none yet: yours to take"
+            "open: yours to take"
           ) : (
             <SolLink account={wager.taker}>{shortKey(wager.taker)}</SolLink>
           )}
         </Field>
-        <Field label="Stake each">{lamportsToSol(wager.stakeLamports)} SOL</Field>
-        <Field label="Pot">{lamportsToSol(pot)} SOL</Field>
+        <Field label="Bet size">{lamportsToSol(wager.stakeLamports)} SOL</Field>
+        <Field label="Winner takes">{lamportsToSol(pot)} SOL</Field>
       </div>
 
       {/* perforation between ticket body and receipt stub */}

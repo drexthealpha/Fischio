@@ -7,9 +7,19 @@ const API = "https://txline-dev.txodds.com";
 const { jwt, apiToken } = JSON.parse(readFileSync("day1/credentials.json", "utf8"));
 const h = { Authorization: `Bearer ${jwt}`, "X-Api-Token": apiToken };
 
-const today = Math.floor(Date.now() / 86400000);
+// Accumulate: seed from the existing file so names of already-settled fixtures never drop
+// out of the map. A ticket that settled last week must still render team names, not a raw
+// fixture id, so the snapshot only ever grows.
 const map = new Map();
-for (const day of [today - 4, today - 2, today]) {
+try {
+  const prev = JSON.parse(readFileSync("app/src/fixtures.json", "utf8"));
+  for (const f of prev.fixtures ?? []) map.set(f.id, f);
+} catch { /* first run: no existing file */ }
+
+const today = Math.floor(Date.now() / 86400000);
+const days = [];
+for (let d = today - 12; d <= today + 2; d++) days.push(d); // wide window so nothing is missed
+for (const day of days) {
   const r = await fetch(`${API}/api/fixtures/snapshot?startEpochDay=${day}`, { headers: h });
   if (!r.ok) continue;
   for (const f of await r.json()) {

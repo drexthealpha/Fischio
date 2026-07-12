@@ -1,6 +1,36 @@
 {
-  "generatedAt": "2026-07-04T16:17:23.396Z",
+  "generatedAt": "2026-07-11T12:50:58.236Z",
   "fixtures": [
+    {
+      "id": 17588325,
+      "home": "Jordan",
+      "away": "Argentina",
+      "kickoff": "2026-06-28T02:00:00.000Z"
+    },
+    {
+      "id": 17588326,
+      "home": "Algeria",
+      "away": "Austria",
+      "kickoff": "2026-06-28T02:00:00.000Z"
+    },
+    {
+      "id": 18167317,
+      "home": "South Africa",
+      "away": "Canada",
+      "kickoff": "2026-06-28T19:00:00.000Z"
+    },
+    {
+      "id": 18172469,
+      "home": "Brazil",
+      "away": "Japan",
+      "kickoff": "2026-06-29T17:00:00.000Z"
+    },
+    {
+      "id": 18175983,
+      "home": "Germany",
+      "away": "Paraguay",
+      "kickoff": "2026-06-29T20:30:00.000Z"
+    },
     {
       "id": 18172280,
       "home": "Netherlands",
@@ -89,7 +119,7 @@
       "id": 18188721,
       "home": "Paraguay",
       "away": "France",
-      "kickoff": "2026-07-04T21:00:00.000Z"
+      "kickoff": "2026-07-04T21:03:00.000Z"
     },
     {
       "id": 18187298,
@@ -101,7 +131,7 @@
       "id": 18192996,
       "home": "Mexico",
       "away": "England",
-      "kickoff": "2026-07-06T00:00:00.000Z"
+      "kickoff": "2026-07-06T01:00:00.000Z"
     },
     {
       "id": 18198205,
@@ -126,6 +156,36 @@
       "home": "Switzerland",
       "away": "Colombia",
       "kickoff": "2026-07-07T20:00:00.000Z"
+    },
+    {
+      "id": 18209181,
+      "home": "France",
+      "away": "Morocco",
+      "kickoff": "2026-07-09T20:00:00.000Z"
+    },
+    {
+      "id": 18218149,
+      "home": "Spain",
+      "away": "Belgium",
+      "kickoff": "2026-07-10T19:00:00.000Z"
+    },
+    {
+      "id": 18213979,
+      "home": "Norway",
+      "away": "England",
+      "kickoff": "2026-07-11T21:00:00.000Z"
+    },
+    {
+      "id": 18222446,
+      "home": "Argentina",
+      "away": "Switzerland",
+      "kickoff": "2026-07-12T01:00:00.000Z"
+    },
+    {
+      "id": 18237038,
+      "home": "France",
+      "away": "Spain",
+      "kickoff": "2026-07-14T19:00:00.000Z"
     }
   ]
 }

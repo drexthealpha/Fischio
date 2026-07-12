@@ -1,0 +1,21 @@
+[package]
+name = "fischio-oracle"
+version = "0.1.0"
+description = "Optimistic oracle: propose an outcome with a bond, dispute window, arbiter fallback. Resolves markets with no cryptographic proof source."
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "fischio_oracle"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = "0.31.1"
+anchor-spl = "0.31.1"

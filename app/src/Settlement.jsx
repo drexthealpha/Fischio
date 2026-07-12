@@ -18,13 +18,18 @@ export default function Settlement() {
       .catch((e) => setError(String(e.message ?? e)));
   }, []);
 
+  // one card per fixture, newest first, recent only, so the feed reads as a ticker not a dump
+  const curated = (items ?? [])
+    .slice()
+    .sort((a, b) => (b.blockTime ?? 0) - (a.blockTime ?? 0))
+    .filter((t, i, arr) => arr.findIndex((x) => x.fixtureId === t.fixtureId) === i)
+    .slice(0, 8);
+
   return (
     <div className="settlement">
       <div className="settlement-head">
         <h2 className="display settlement-title">Settlements</h2>
-        <span className="mono replay-chip">
-          reconstructed live from chain · nothing stored off-chain
-        </span>
+        <span className="mono replay-chip">Recent results</span>
       </div>
 
       {error && (
@@ -40,7 +45,7 @@ export default function Settlement() {
       )}
 
       <div className="settlements-list">
-        {(items ?? []).map((t) => (
+        {curated.map((t) => (
           <div key={t.address} className="settlement-item">
             <div className="mono settle-when">settled {when(t.blockTime)}</div>
             <Ticket wager={t} />
