@@ -3,32 +3,32 @@
 // Unlike the closed, centralised Betfair bots, every quote it makes is an on-chain limit
 // order anyone can see, take, or verify.
 //
-// The strategy is transparent and deterministic. From the live score and clock it computes a
-// fair probability that the home side wins in 90 minutes plus extra time (a Skellam / Poisson
-// diffusion of the remaining goal difference), then posts a bid just below and an ask just
-// above that fair value. When a goal lands or the clock ticks, the fair value moves and the
-// bot cancels and re-quotes. No human input after launch.
+// Fair value is not modelled. It is the demargined 1X2 line published by TxLINE: the home
+// probability of that line is the fair price of a home-win share, because a draw pays the
+// taker. The bot reads the live odds endpoint, takes the home probability, and posts a bid
+// just below and an ask just above it. When the line moves, the bot cancels and re-quotes.
+// If the odds feed has no line yet, it holds and quotes nothing. No model, no simulation:
+// the only inputs are TxLINE's own scores and odds endpoints.
 //
-//   node bot/inplay-mm.mjs --fixture 18218149            # real TxLINE scores feed
-//   node bot/inplay-mm.mjs --sim                          # simulated in-play match (offline)
+//   node bot/inplay-mm.mjs --fixture 18218149            # a real TxLINE fixture (required)
 //   flags: --spread 0.03  --size 100  --interval 8000  --rpc <url>
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import * as anchor from "@coral-xyz/anchor";
-import { Connection, Keypair, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import {
   createMint, getOrCreateAssociatedTokenAccount, mintTo, TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
+import { impliedResult } from "../lib/txline.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d; };
-const has = (k) => process.argv.includes(`--${k}`);
 
 const RPC = arg("rpc", process.env.RPC ?? "https://api.devnet.solana.com");
 const FIXTURE = Number(arg("fixture", 0));
-const SIM = has("sim") || !FIXTURE;
+if (!FIXTURE) { console.error("usage: node bot/inplay-mm.mjs --fixture <id>  (a real TxLINE fixture id is required; there is no simulated mode)"); process.exit(1); }
 const SPREAD = Number(arg("spread", 0.03));   // half-spread around fair, in probability
 const SIZE = Number(arg("size", 100));         // shares quoted each side
 const INTERVAL = Number(arg("interval", 8000));
@@ -44,35 +44,13 @@ const seed = (s, k) => PublicKey.findProgramAddressSync([Buffer.from(s), k.toBuf
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
-// standard normal CDF (Abramowitz-Stegun), for the diffusion model
-function normCdf(z) {
-  const t = 1 / (1 + 0.2316419 * Math.abs(z));
-  const d = 0.3989423 * Math.exp(-z * z / 2);
-  let p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-  return z > 0 ? 1 - p : p;
-}
-
-// Fair probability that home wins in 90'+ET, from the live score and clock. Models the
-// remaining goal difference as a diffusion: variance grows with the minutes left, so a lead
-// is worth more late than early. A draw resolves to the taker (home does NOT win), so at full
-// time the fair value collapses to 1 if home leads, else ~0.
-function fairHomeWin(homeGoals, awayGoals, clockSeconds) {
-  const gd = homeGoals - awayGoals;
-  const t = clamp((clockSeconds ?? 0) / 60, 0, 90);
-  const rem = Math.max(0, 90 - t);
-  if (rem <= 0.5) return gd > 0 ? 0.98 : 0.02;   // effectively decided
-  const lambda = 0.016;                            // goals per minute per team, ~2.9/match
-  const sd = Math.sqrt(2 * lambda * rem);          // sd of remaining goal difference
-  return clamp(normCdf(gd / sd), 0.02, 0.98);      // P(final gd > 0)
-}
-
-// ---- the live feed: real TxLINE scores, or a simulated in-play match ----
-let creds = null;
-try { creds = JSON.parse(readFileSync(join(root, "day1/credentials.json"), "utf8")); } catch { /* sim only */ }
+// ---- the live feed: real TxLINE scores and the real demargined odds line ----
+const creds = JSON.parse(readFileSync(join(root, "day1/credentials.json"), "utf8"));
+const headers = { Authorization: `Bearer ${creds.jwt}`, "X-Api-Token": creds.apiToken };
+const TXLINE = "https://txline-dev.txodds.com";
 
 async function realState() {
-  const r = await fetch(`https://txline-dev.txodds.com/api/scores/snapshot/${FIXTURE}?asOf=${Date.now()}`,
-    { headers: { Authorization: `Bearer ${creds.jwt}`, "X-Api-Token": creds.apiToken } }).catch(() => null);
+  const r = await fetch(`${TXLINE}/api/scores/snapshot/${FIXTURE}?asOf=${Date.now()}`, { headers }).catch(() => null);
   if (!r?.ok) return null;
   const recs = await r.json();
   if (!Array.isArray(recs) || recs.length === 0) return null;
@@ -88,15 +66,16 @@ async function realState() {
   };
 }
 
-// a plausible in-play match for offline demos: clock advances, goals arrive at set minutes
-let simStart = Date.now(); // reset after book setup so the match starts when quoting starts
-const SIM_RATE = Number(arg("simrate", 1.5)); // sim-minutes per real second (90'/60s by default)
-const simGoals = [{ m: 18, side: "home" }, { m: 34, side: "away" }, { m: 61, side: "home" }, { m: 79, side: "home" }];
-function simState() {
-  const mins = ((Date.now() - simStart) / 1000) * SIM_RATE;
-  let home = 0, away = 0;
-  for (const g of simGoals) if (mins >= g.m) (g.side === "home" ? home++ : away++);
-  return { home, away, clock: Math.min(90, mins) * 60, statusId: mins >= 90 ? 5 : 2 };
+// the demargined 1X2 line from the odds endpoint; the 1X2 row is intermittent in snapshots,
+// so hold the last good line rather than drop a quote when a poll misses it
+let lastLine = null;
+async function realLine() {
+  const r = await fetch(`${TXLINE}/api/odds/snapshot/${FIXTURE}`, { headers }).catch(() => null);
+  if (!r?.ok) return lastLine;
+  const rows = await r.json().catch(() => null);
+  const line = Array.isArray(rows) ? impliedResult(rows) : null;
+  if (line) lastLine = line;
+  return lastLine;
 }
 
 // ---- fischio order book: set up a book the bot funds and quotes on ----
@@ -165,9 +144,8 @@ async function requote(book, oo, fair) {
 // ---- run ----
 await airdropIfNeeded();
 const { book, oo } = await setupBook();
-simStart = Date.now(); // start the simulated match now that the book is ready
-log(SIM ? "mode: SIMULATED in-play match (kickoff)" : `mode: LIVE TxLINE fixture ${FIXTURE}`);
-log(`quoting ${SIZE} shares each side at +/- ${SPREAD} around fair, every ${INTERVAL}ms`);
+log(`mode: LIVE TxLINE fixture ${FIXTURE}`);
+log(`quoting ${SIZE} shares each side at +/- ${SPREAD} around the demargined line, every ${INTERVAL}ms`);
 
 let lastFair = null;
 let running = false; // a slow tick (RPC retries) must finish before the next starts, or two
@@ -176,19 +154,20 @@ async function tick() {
   if (running) { log("previous tick still running, skipping"); return; }
   running = true;
   try {
-    const st = SIM ? simState() : await realState();
-    if (!st) { log("no feed data yet, holding"); return; }
-    const fair = fairHomeWin(st.home, st.away, st.clock);
-    const mins = Math.floor((st.clock ?? 0) / 60);
+    const [st, line] = await Promise.all([realState(), realLine()]);
+    if (!line) { log("no demargined line from the odds feed yet, holding quotes"); return; }
+    const fair = clamp(line.home, 0.01, 0.99); // P(home wins); a draw pays the taker
+    const mins = Math.floor((st?.clock ?? 0) / 60);
+    const score = st ? `${st.home}-${st.away}` : "?";
     if (lastFair == null || Math.abs(fair - lastFair) > 0.005) {
       const { bid, ask } = await requote(book, oo, fair);
-      log(`${mins}'  score ${st.home}-${st.away}  fair ${(fair * 100).toFixed(0)}%  ->  quote bid ${bid.toFixed(2)} / ask ${ask.toFixed(2)}`);
+      log(`${mins}'  score ${score}  line home ${(fair * 100).toFixed(0)}%  ->  quote bid ${bid.toFixed(2)} / ask ${ask.toFixed(2)}`);
       lastFair = fair;
     } else {
-      log(`${mins}'  score ${st.home}-${st.away}  fair ${(fair * 100).toFixed(0)}%  (unchanged, holding quotes)`);
+      log(`${mins}'  score ${score}  line home ${(fair * 100).toFixed(0)}%  (unchanged, holding quotes)`);
     }
-    if (st.statusId === 5 || st.statusId === 10 || st.statusId === 13) {
-      log("full time reached; final fair", (fair * 100).toFixed(0) + "%. Stopping.");
+    if (st && (st.statusId === 5 || st.statusId === 10 || st.statusId === 13)) {
+      log("full time reached; final line home", (fair * 100).toFixed(0) + "%. Stopping.");
       process.exit(0);
     }
   } catch (e) { log("tick error:", String(e.message ?? e)); }

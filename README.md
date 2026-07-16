@@ -28,6 +28,12 @@ Here is a real settlement you can check yourself: wager
 Open the transaction and you can see the inner call into the oracle that verified the score
 before any money moved.
 
+You do not have to take our word for the maths either. The Settlement view has a **verify it
+yourself** panel: it reads the Merkle proof out of the settle transaction, hashes the raw score
+in your browser with the Web Crypto API, and shows it reproduces the exact root TxLINE committed
+on-chain. Change a goal in the panel and the root diverges, which is why a forged score cannot
+settle. No server, no library, no trust in us.
+
 ## What you can trade
 
 - **Match result (1X2)**: every match is a three-way market, Home, Draw, and Away, shown side
@@ -90,11 +96,12 @@ expiry and both sides get their stakes back. Correctness never depends on us sta
 
 ## An autonomous market maker
 
-`bot/inplay-mm.mjs` reads the live TxLINE score, works out a fair probability that the home
-side wins in 90 minutes plus extra time, and quotes two-sided prices on the order book. When a
-goal lands or the clock ticks, the fair value moves and the bot re-quotes. It runs on the real
-feed or on a simulated match for offline demos, and it logs every decision. Every quote it
-makes is a public on-chain order.
+`bot/inplay-mm.mjs` takes its fair value straight from TxLINE. It reads the demargined 1X2
+line from the odds endpoint, uses the home probability as the fair price of a home-win share,
+and quotes a bid just below and an ask just above it on the order book. When the line moves,
+the bot re-quotes. Nothing is modelled or simulated: if the odds feed has no line yet, the bot
+holds and quotes nothing. It runs only on a real fixture, logs every decision, and every quote
+it makes is a public on-chain order.
 
 ## The live data layer
 
@@ -133,10 +140,9 @@ Resolve a prediction market the same way, by proof, the moment its match ends:
 
     node bot/settle-market.mjs --market <address> --rpc https://api.devnet.solana.com
 
-Run the in-play market maker:
+Run the in-play market maker on a real fixture (it quotes the demargined TxLINE line):
 
-    node bot/inplay-mm.mjs --fixture <id>    # live TxLINE feed
-    node bot/inplay-mm.mjs --sim             # simulated match, offline
+    node bot/inplay-mm.mjs --fixture <id>
 
 Keep every AMM price on the live line (with the ingestion service running):
 

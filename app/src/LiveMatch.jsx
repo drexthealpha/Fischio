@@ -1,126 +1,144 @@
-// Live: the in-play view. It follows a match minute by minute and reprices the three outcomes
-// as the score changes, using a Poisson goal model, so a goal visibly moves the odds on screen.
-// The autonomous maker (Track C) quotes two-sided prices around fair value and re-quotes every
-// tick. It uses the real TxLINE score when a match is live and runs a deterministic simulation
-// otherwise, which the hackathon endorses so the mechanic always shows in a demo.
-import { useEffect, useRef, useState } from "react";
+// Live: the match view. Every number here comes from the TxLINE feed and nothing is
+// modelled or simulated. The score, the clock, and the phase come from the scores endpoint.
+// The three-way price is the demargined 1X2 line from the odds endpoint, which the book
+// itself reprices as the match runs, so a goal moves the odds because the real line moved.
+// Before kickoff it shows the opening line and a countdown. When the feed is not reachable
+// it says so and shows nothing it cannot stand behind.
+import { useEffect, useState } from "react";
 import Flag from "./Flag.jsx";
-import { UPCOMING } from "./chain.js";
+import { UPCOMING, fetchLiveScores } from "./chain.js";
+import { fetchLiveLine } from "./market.js";
+import { fmtCountdown } from "./data.js";
 
-const factorial = (n) => { let f = 1; for (let i = 2; i <= n; i++) f *= i; return f; };
-const poisson = (k, l) => (Math.exp(-l) * l ** k) / factorial(k);
-
-// 1X2 from the current score and clock. Remaining goals for each side are Poisson with a rate
-// that shrinks as the match runs out, and the home side carries a small edge. A lead late is
-// worth far more than the same lead early, which is exactly what the model shows.
-function oneXtwo(hg, ag, minute) {
-  const left = Math.max(0, 96 - minute) / 96;
-  const lh = 1.45 * left + 1e-6, la = 1.15 * left + 1e-6;
-  let home = 0, draw = 0, away = 0;
-  for (let h = 0; h <= 9; h++) {
-    for (let a = 0; a <= 9; a++) {
-      const p = poisson(h, lh) * poisson(a, la);
-      const fh = hg + h, fa = ag + a;
-      if (fh > fa) home += p; else if (fh === fa) draw += p; else away += p;
-    }
-  }
-  const s = home + draw + away || 1;
-  return { home: home / s, draw: draw / s, away: away / s };
-}
-
-const SIM_GOALS = [{ m: 22, side: "h" }, { m: 39, side: "a" }, { m: 64, side: "h" }, { m: 81, side: "h" }];
-const simScore = (minute) => SIM_GOALS.reduce((s, g) => (minute >= g.m ? { ...s, [g.side]: s[g.side] + 1 } : s), { h: 0, a: 0 });
+// TxLINE status ids, from the real feed (RECON.md). live = the ball is in play, done = a
+// terminal phase where the result is final.
+const PHASE = {
+  1: { t: "Pre-match" },
+  2: { t: "1st half", live: true }, 3: { t: "Half time", live: true }, 4: { t: "2nd half", live: true },
+  5: { t: "Full time", done: true },
+  6: { t: "Extra time", live: true }, 7: { t: "ET first half", live: true }, 8: { t: "ET half time", live: true },
+  9: { t: "ET second half", live: true }, 10: { t: "After extra time", done: true },
+  11: { t: "Penalties", live: true }, 12: { t: "Penalties", live: true }, 13: { t: "After penalties", done: true },
+  100: { t: "Final", done: true },
+};
 
 export default function LiveMatch() {
-  const fixture = (UPCOMING ?? [])[0] ?? { id: 0, home: "France", away: "Spain" };
-  const [minute, setMinute] = useState(0);
-  const [flash, setFlash] = useState(null);
-  const prev = useRef({ h: 0, a: 0 });
+  const games = UPCOMING ?? [];
+  const [fixtureId, setFixtureId] = useState(games[0]?.id);
+  const fixture = games.find((f) => f.id === fixtureId) ?? games[0] ?? null;
+  const [line, setLine] = useState(null); // real demargined { home, draw, away }
+  const [score, setScore] = useState(null); // real { statusId, goals:[h,a], clockSeconds }
+  const [nowMs, setNowMs] = useState(Date.now());
+
+  useEffect(() => { const t = setInterval(() => setNowMs(Date.now()), 1000); return () => clearInterval(t); }, []);
 
   useEffect(() => {
-    const t = setInterval(() => setMinute((m) => (m >= 98 ? 0 : m + 1)), 450);
-    return () => clearInterval(t);
-  }, []);
+    if (!fixture?.id) return;
+    setLine(null); setScore(null); // clear the previous match when switching
+    let alive = true;
+    const load = async () => {
+      const [l, s] = await Promise.all([
+        fetchLiveLine(fixture.id).catch(() => null),
+        fetchLiveScores([fixture.id]).then((m) => m[fixture.id] ?? null).catch(() => null),
+      ]);
+      if (!alive) return;
+      if (l) setLine(l);
+      setScore(s);
+    };
+    load();
+    const t = setInterval(load, 8000);
+    return () => { alive = false; clearInterval(t); };
+  }, [fixture?.id]);
 
-  const score = simScore(minute);
-  useEffect(() => {
-    if (score.h > prev.current.h) setFlash(`GOAL — ${fixture.home}`);
-    else if (score.a > prev.current.a) setFlash(`GOAL — ${fixture.away}`);
-    prev.current = score;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [score.h, score.a]);
-  useEffect(() => {
-    if (!flash) return;
-    const t = setTimeout(() => setFlash(null), 2200);
-    return () => clearTimeout(t);
-  }, [flash]);
+  if (!fixture) {
+    return (
+      <div className="live">
+        <div className="section-head"><h2 className="display section-title">Match</h2></div>
+        <p className="empty-state">No fixture in the feed yet. Fixtures load from the TxLINE fixtures endpoint.</p>
+      </div>
+    );
+  }
 
-  const p = oneXtwo(score.h, score.a, minute);
-  const ft = minute >= 96;
+  const kickoffMs = fixture.kickoff ? new Date(fixture.kickoff).getTime() : null;
+  const phase = score?.statusId != null ? PHASE[score.statusId] : null;
+  const inPlay = phase?.live === true;
+  const done = phase?.done === true;
+  const beforeKickoff = !inPlay && !done && kickoffMs != null && nowMs < kickoffMs;
+
+  const goals = Array.isArray(score?.goals) ? score.goals : null;
+  const minute = score?.clockSeconds != null ? Math.floor(score.clockSeconds / 60) : null;
+  const winner = done && goals ? (goals[0] > goals[1] ? "home" : goals[0] === goals[1] ? "draw" : "away") : null;
+
   const legs = [
-    { key: "home", label: fixture.home, p: p.home },
-    { key: "draw", label: "Draw", p: p.draw },
-    { key: "away", label: fixture.away, p: p.away },
+    { key: "home", label: fixture.home, p: line?.home },
+    { key: "draw", label: "Draw", p: line?.draw },
+    { key: "away", label: fixture.away, p: line?.away },
   ];
-  const goalsScored = SIM_GOALS.filter((g) => minute >= g.m).map((g) => ({ minute: g.m, team: g.side === "h" ? fixture.home : fixture.away }));
+
+  const title = inPlay ? "Live" : done ? "Full time" : "Match";
+  const sub = inPlay ? "in-play · priced by the live TxLINE line"
+    : done ? "final result from the TxLINE feed"
+    : beforeKickoff ? "pre-match · opening line from TxLINE"
+    : "waiting for the TxLINE feed";
 
   return (
     <div className="live">
       <div className="section-head">
-        <h2 className="display section-title">Live</h2>
-        <span className="mono section-sub">in-play · prices reprice on every goal</span>
+        <h2 className="display section-title">{title}</h2>
+        <span className="mono section-sub">{sub}</span>
       </div>
+
+      {games.length > 1 && (
+        <div className="live-switch">
+          {games.map((g) => (
+            <button
+              key={g.id}
+              className={`live-switch-chip${g.id === fixture.id ? " live-switch-on" : ""}`}
+              onClick={() => setFixtureId(g.id)}
+            >
+              <Flag team={g.home} size={14} /> {g.home} v {g.away} <Flag team={g.away} size={14} />
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="livecard">
         <div className="livecard-top">
           <span className="live-team"><Flag team={fixture.home} size={24} /> {fixture.home}</span>
-          <span className="display live-score">{score.h}<span className="live-dash">–</span>{score.a}</span>
+          {goals
+            ? <span className="display live-score">{goals[0]}<span className="live-dash">–</span>{goals[1]}</span>
+            : <span className="display live-score live-score-tbd">v</span>}
           <span className="live-team live-away">{fixture.away} <Flag team={fixture.away} size={24} /></span>
         </div>
+
         <div className="live-clock">
-          <span className="live-dot-live" />
-          <span className="mono">{ft ? "FULL TIME" : `${minute}'`}</span>
-          {flash && <span className="live-goal">{flash}</span>}
+          {inPlay && <span className="live-dot-live" />}
+          <span className="mono">
+            {inPlay ? `${phase.t}${minute != null ? ` · ${minute}'` : ""}`
+              : done ? phase.t
+              : beforeKickoff ? `Kicks off in ${fmtCountdown(kickoffMs - nowMs)}`
+              : "Awaiting the live feed"}
+          </span>
+          {fixture.kickoff && !inPlay && !done && (
+            <span className="mono live-ko">{fixture.kickoff.slice(0, 16).replace("T", " ")} UTC</span>
+          )}
         </div>
 
-        <div className="live-outcomes">
-          {legs.map((l) => (
-            <div className={`live-out live-out-${l.key}`} key={l.key}>
-              <span className="live-out-name">{l.label}</span>
-              <span className="display live-out-pct">{Math.round(l.p * 100)}%</span>
-              <div className="live-out-bar"><span className="live-out-fill" style={{ width: `${Math.round(l.p * 100)}%` }} /></div>
-            </div>
-          ))}
-        </div>
-
-        {goalsScored.length > 0 && (
-          <div className="live-timeline">
-            <span className="microlabel live-timeline-label">Goals</span>
-            {goalsScored.map((g, i) => (
-              <span className="live-event" key={i}><span className="live-event-min">{g.minute}&#39;</span> ⚽ {g.team}</span>
+        {line ? (
+          <div className="live-outcomes">
+            {legs.map((l) => (
+              <div className={`live-out live-out-${l.key}${winner ? (winner === l.key ? " mr-out-won" : " mr-out-lost") : ""}`} key={l.key}>
+                <span className="live-out-name">{l.label}</span>
+                {winner
+                  ? <span className="display live-out-pct">{winner === l.key ? "WON" : "lost"}</span>
+                  : <span className="display live-out-pct">{Math.round((l.p ?? 0) * 100)}%</span>}
+                {!winner && <div className="live-out-bar"><span className="live-out-fill" style={{ width: `${Math.round((l.p ?? 0) * 100)}%` }} /></div>}
+              </div>
             ))}
           </div>
+        ) : (
+          <div className="live-feedwait mono">Live odds open as kickoff approaches.</div>
         )}
-      </div>
-
-      <div className="livecard live-maker">
-        <div className="section-head">
-          <h3 className="display live-maker-title">Autonomous maker</h3>
-          <span className="mono section-sub">Track C · re-quotes on every tick</span>
-        </div>
-        <div className="live-quotes">
-          {legs.map((l) => {
-            const bid = Math.max(1, Math.round((l.p - 0.025) * 100));
-            const ask = Math.min(99, Math.round((l.p + 0.025) * 100));
-            return (
-              <div className="live-quote" key={l.key}>
-                <span className="live-quote-name">{l.label}</span>
-                <span className="live-quote-px"><span className="live-bid">{bid}c</span><span className="live-quote-sep">bid</span></span>
-                <span className="live-quote-px"><span className="live-ask">{ask}c</span><span className="live-quote-sep">ask</span></span>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

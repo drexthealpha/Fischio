@@ -111,7 +111,6 @@ export default function OrderBook() {
           on-chain matching · {RPC.includes("devnet") ? "devnet" : RPC}
         </span>
       </div>
-      <p className="tagline clob-lede">A price-time order book, fully on-chain. Rest a limit order, or take one that is resting.</p>
 
       {notice && <div className="notice mono">{notice}</div>}
       {error && <div className="live-error mono">Could not read the exchange: {error}</div>}

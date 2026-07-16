@@ -3,7 +3,7 @@
 // No recordings, no stored history; the chain is the only source.
 import { useEffect, useState } from "react";
 import Ticket from "./Ticket.jsx";
-import { fetchSettlements } from "./chain.js";
+import { fetchSettlements, fetchLiveScores } from "./chain.js";
 
 const when = (t) =>
   t ? new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ") + " UTC" : "";
@@ -11,12 +11,19 @@ const when = (t) =>
 export default function Settlement() {
   const [items, setItems] = useState(null); // null = loading
   const [error, setError] = useState(null);
+  const [stats, setStats] = useState({}); // fixtureId -> full box score from the scores feed
 
   useEffect(() => {
     fetchSettlements()
       .then(setItems)
       .catch((e) => setError(String(e.message ?? e)));
   }, []);
+
+  // pull the full stat line (corners, cards) for settled fixtures; quiet if the feed is absent
+  useEffect(() => {
+    const ids = [...new Set((items ?? []).map((t) => t.fixtureId))];
+    if (ids.length) fetchLiveScores(ids).then(setStats).catch(() => {});
+  }, [items]);
 
   // one card per fixture, newest first, recent only, so the feed reads as a ticker not a dump
   const curated = (items ?? [])
@@ -48,7 +55,7 @@ export default function Settlement() {
         {curated.map((t) => (
           <div key={t.address} className="settlement-item">
             <div className="mono settle-when">settled {when(t.blockTime)}</div>
-            <Ticket wager={t} />
+            <Ticket wager={t} stats={stats[t.fixtureId]} />
           </div>
         ))}
       </div>

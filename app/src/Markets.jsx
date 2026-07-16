@@ -5,7 +5,7 @@ import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import Ticket from "./Ticket.jsx";
 import CreateWager from "./CreateWager.jsx";
 import SolLink from "./SolLink.jsx";
-import { fetchAllWagers, fetchLatestSettlement, fetchLiveScores, refreshFixtures, acceptWagerTx, createWagerTx, connection, UPCOMING, RPC } from "./chain.js";
+import { fetchAllWagers, fetchLiveScores, refreshFixtures, acceptWagerTx, createWagerTx, connection, UPCOMING, RPC } from "./chain.js";
 import { lamportsToSol, shortKey } from "./data.js";
 
 export default function Markets() {
@@ -18,8 +18,6 @@ export default function Markets() {
   const [liveScores, setLiveScores] = useState({});
   const [noSol, setNoSol] = useState(false);
 
-  const [latest, setLatest] = useState(undefined); // undefined = loading, null = none yet
-
   const load = () =>
     fetchAllWagers()
       .then((w) => { setWagers(w); setLoadError(null); })
@@ -27,7 +25,6 @@ export default function Markets() {
   const [fixtures, setFixtures] = useState(UPCOMING);
   useEffect(() => {
     refreshFixtures().then((f) => { setFixtures(f); load(); });
-    fetchLatestSettlement().then(setLatest).catch(() => setLatest(null));
   }, []);
 
   // tickets breathe with the feed: poll compact live state for visible fixtures
@@ -111,25 +108,6 @@ export default function Markets() {
           </a>
           , then refresh.
         </div>
-      )}
-
-      {/* first thing a visitor sees: the product working, reconstructed live from chain */}
-      {latest !== null && (
-        <>
-          <div className="section-head">
-            <h2 className="display section-title">Latest settlement</h2>
-            <span className="mono section-sub">
-              read live from devnet · settled by proof, not by anyone
-            </span>
-          </div>
-          <div className="hero-ticket">
-            {latest === undefined ? (
-              <div className="feed-idle mono">reading latest settlement from chain…</div>
-            ) : (
-              <Ticket wager={latest} />
-            )}
-          </div>
-        </>
       )}
 
       <div className="markets-columns">

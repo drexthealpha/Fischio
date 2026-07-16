@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { lamportsToSol, shortKey } from "./data.js";
 import Flag from "./Flag.jsx";
 import Barcode from "./Barcode.jsx";
 import SolLink from "./SolLink.jsx";
+import ProofPanel from "./ProofPanel.jsx";
+import BoxScore from "./BoxScore.jsx";
 
 const PHASE_NAMES = { 5: "FULL TIME", 10: "AFTER EXTRA TIME", 13: "AFTER PENALTIES" };
 
@@ -21,7 +24,8 @@ function Field({ label, children, mono = true }) {
   );
 }
 
-export default function Ticket({ wager, live }) {
+export default function Ticket({ wager, live, stats }) {
+  const [showProof, setShowProof] = useState(false);
   const settled = wager.state === "settled";
   const pot = 2 * wager.stakeLamports;
   const showLive = !settled && !wager.finalScore && live?.goals;
@@ -103,6 +107,7 @@ export default function Ticket({ wager, live }) {
                 {wager.settleSig}
               </SolLink>
             </div>
+            <BoxScore home={wager.home} away={wager.away} stats={stats} />
             <div className="stub-settler mono">
               settled permissionlessly by{" "}
               {wager.settler ? (
@@ -112,6 +117,14 @@ export default function Ticket({ wager, live }) {
               )}{" "}
               · tip {lamportsToSol(wager.tipLamports)} SOL
             </div>
+            {wager.proof?.statA?.statProof?.length > 0 && (
+              <div className="ticket-verify">
+                <button type="button" className="ticket-verify-btn" onClick={() => setShowProof((v) => !v)}>
+                  {showProof ? "hide proof" : "verify this settlement in your browser"}
+                </button>
+                {showProof && <ProofPanel bundle={wager.proof} />}
+              </div>
+            )}
             <Barcode data={wager.settleSig} />
           </>
         ) : (

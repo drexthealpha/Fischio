@@ -21,6 +21,14 @@ const tokenKey = (pk) => `fischio.session.${pk}`;
 const params = new URLSearchParams(window.location.search);
 const API = params.get("api") ?? "http://127.0.0.1:8790";
 
+// A fetch that gives up after a few seconds, so a missing or slow session backend can never
+// leave the header stuck on "signing in". Trading is on-chain and does not need this session.
+const fetchT = (url, opts = {}, ms = 6000) => {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), ms);
+  return fetch(url, { ...opts, signal: c.signal }).finally(() => clearTimeout(t));
+};
+
 function sessionId() {
   try {
     let s = localStorage.getItem(SID);
@@ -59,12 +67,12 @@ export function WalletBridgeProvider({ children }) {
     if (!pubkey || !signMessage) return false;
     setSigningIn(true);
     try {
-      const { nonce } = await (await fetch(`${API}/auth/nonce`, {
+      const { nonce } = await (await fetchT(`${API}/auth/nonce`, {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pubkey }),
       })).json();
       const sig = await signMessage(new TextEncoder().encode(nonce));
       const b64 = btoa(String.fromCharCode(...sig));
-      const j = await (await fetch(`${API}/auth/verify`, {
+      const j = await (await fetchT(`${API}/auth/verify`, {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pubkey, signature: b64 }),
       })).json();
       if (!j.token) throw new Error(j.error ?? "sign-in failed");
@@ -85,7 +93,7 @@ export function WalletBridgeProvider({ children }) {
     if (!pubkey) return;
     const check = async () => {
       if (token) {
-        const ok = (await fetch(`${API}/me`, { headers: { authorization: `Bearer ${token}` } }).then((r) => r.ok).catch(() => false));
+        const ok = (await fetchT(`${API}/me`, { headers: { authorization: `Bearer ${token}` } }).then((r) => r.ok).catch(() => false));
         if (alive && ok) { setSignedIn(true); return; }
       }
       if (alive && isEmbedded) await signIn(); // instant wallet signs in with no popup

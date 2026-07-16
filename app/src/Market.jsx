@@ -22,6 +22,23 @@ import {
 const pct = (p) => `${(p * 100).toFixed(1)}%`;
 const qty = (n) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
+// A match is over once its window has elapsed (kickoff plus regulation, stoppage, and a
+// margin for extra time). A market for a match already played must never read as a live
+// tradeable line, even while its on-chain state is still Trading because no one has settled
+// it. Time decides that, since the chain state alone cannot.
+const MATCH_WINDOW_MS = 150 * 60 * 1000;
+const matchOver = (kickoff) => {
+  const t = kickoff ? new Date(kickoff).getTime() : 0;
+  return t > 0 && Date.now() > t + MATCH_WINDOW_MS;
+};
+const cents = (p) => `${Math.round((p ?? 0) * 100)}¢`;
+const vol = (n) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}m` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${Math.round(n)}`);
+const koLabel = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}, ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
+};
+
 // collapse duplicate markets to one card, keyed by fixture AND market type, so a match can
 // show its winner, corners, and cards markets side by side, but three identical winner
 // markets become one. Prefer a trading market, then the deepest pool.
@@ -55,12 +72,18 @@ function groupMarkets(markets) {
     const better = !cur || ((m.state === "trading") !== (cur.state === "trading") ? m.state === "trading" : m.liquidity > cur.liquidity);
     if (better) g.legs[leg] = m;
   }
+  const results = [];
   for (const g of groups.values()) {
     const legs = Object.values(g.legs);
     g.liquidity = legs.reduce((s, x) => s + x.liquidity, 0);
     g.state = legs.some((x) => x.state === "trading") ? "trading" : "closed";
+    // A real three-way market needs all three legs. A fixture with only a home leg is a
+    // legacy binary "home to win" market, not a 1X2, so render it as its own plain card
+    // instead of a result card with blank Draw and Away outcomes.
+    if (g.legs.home && g.legs.draw && g.legs.away) results.push(g);
+    else props.push(...legs);
   }
-  return { results: [...groups.values()].sort((a, b) => b.liquidity - a.liquidity), props: dedupeByFixture(props) };
+  return { results: results.sort((a, b) => b.liquidity - a.liquidity), props: dedupeByFixture(props) };
 }
 
 export default function Market() {
@@ -98,7 +121,7 @@ export default function Market() {
   // for closed result markets, pull the real final score so the card shows the outcome, not odds
   useEffect(() => {
     const { results } = groupMarkets(markets ?? []);
-    const ids = results.filter((g) => g.state !== "trading").map((g) => g.fixtureId);
+    const ids = results.filter((g) => g.state !== "trading" || matchOver(g.kickoff)).map((g) => g.fixtureId);
     if (!ids.length) return;
     let alive = true;
     Promise.all(ids.map(async (id) => [id, await fetchFinalScore(id)])).then((entries) => {
@@ -117,25 +140,24 @@ export default function Market() {
 
   // fold into 1X2 match-result cards plus any prop markets, then split live from closed
   const { results, props } = groupMarkets(markets ?? []);
-  const liveResults = results.filter((g) => g.state === "trading");
-  const closedResults = results.filter((g) => g.state !== "trading");
-  const liveProps = props.filter((m) => m.state === "trading");
-  const closedProps = props.filter((m) => m.state !== "trading");
+  const liveResults = results.filter((g) => g.state === "trading" && !matchOver(g.kickoff));
+  const closedResults = results.filter((g) => g.state !== "trading" || matchOver(g.kickoff));
+  const liveProps = props.filter((m) => m.state === "trading" && !matchOver(m.kickoff));
+  const closedProps = props.filter((m) => m.state !== "trading" || matchOver(m.kickoff));
   const closedCount = closedResults.length + closedProps.length;
 
   return (
     <div className="amm">
       <div className="section-head">
         <h2 className="display section-title">Predictions</h2>
-        <span className="mono section-sub">trade against a pool · {RPC.includes("devnet") ? "devnet" : RPC}</span>
+        <span className="mono section-sub">{RPC.includes("devnet") ? "devnet" : RPC}</span>
       </div>
-      <p className="tagline clob-lede">Every match priced live from the TxLINE line. Buy an outcome and the price moves with your trade.</p>
 
       {notice && <div className="notice mono">{notice}</div>}
       {error && <div className="live-error mono">Could not read the market program: {error}</div>}
       {markets === null && !error && <div className="feed-idle mono">reading markets from chain…</div>}
-      {markets && liveResults.length === 0 && liveProps.length === 0 && closedCount === 0 && (
-        <p className="empty-state">No prediction markets yet. Open the first one below.</p>
+      {markets && liveResults.length === 0 && liveProps.length === 0 && (
+        <p className="empty-state">No open markets right now. The board fills as the next matches approach.</p>
       )}
 
       <Upcoming onOpen={(fid) => { const g = results.find((r) => r.fixtureId === fid); if (g?.legs?.home) setOpenAddr(g.legs.home.address); }} />
@@ -143,25 +165,6 @@ export default function Market() {
       <div className="amm-cards">
         {liveResults.map((g) => <MatchResultCard key={g.fixtureId} group={g} live={liveLines[g.fixtureId]} onOpen={setOpenAddr} />)}
         {liveProps.map((m) => <MarketCard key={m.address} m={m} onOpen={() => setOpenAddr(m.address)} />)}
-      </div>
-
-      {closedCount > 0 && (
-        <>
-          <div className="section-head section-head-later">
-            <h2 className="display section-title">Closed</h2>
-            <span className="mono section-sub">{closedCount} past market{closedCount > 1 ? "s" : ""}</span>
-          </div>
-          <div className="amm-cards">
-            {closedResults.map((g) => <MatchResultCard key={g.fixtureId} group={g} live={null} result={finalScores[g.fixtureId]} onOpen={setOpenAddr} />)}
-            {closedProps.map((m) => <MarketCard key={m.address} m={m} onOpen={() => setOpenAddr(m.address)} />)}
-          </div>
-        </>
-      )}
-
-      <div className="amm-create-bar">
-        {creating
-          ? <CreateMarket wallet={wallet} setNotice={setNotice} onCreated={() => { setCreating(false); refresh(); }} onCancel={() => setCreating(false)} />
-          : <button className="amm-open-btn" onClick={() => setCreating(true)}>+ Open a new market</button>}
       </div>
 
       <div className="foot clob-foot">
@@ -191,7 +194,7 @@ function MarketCard({ m, onOpen }) {
       </div>
       <div className="mkt-card-foot">
         <span>{d.yes}</span>
-        <span className="mono">{usd(fromUsdc(m.liquidity))} in play</span>
+        <span className="mono">{vol(fromUsdc(m.liquidity))} in play</span>
       </div>
     </button>
   );
@@ -204,39 +207,53 @@ function MatchResultCard({ group, live, result, onOpen }) {
   const { home, away, legs } = group;
   const label = { home, draw: "Draw", away };
   const winner = result ? (result.home > result.away ? "home" : result.home === result.away ? "draw" : "away") : null;
+  const over = matchOver(group.kickoff);
+  const pending = over && !result; // match has been played, but the result is not in hand yet
+  const tradeable = group.state === "trading" && !over;
+  // Show a coherent 1X2 line. Prefer the live TxLINE demargined line; otherwise normalize
+  // the three on-chain leg prices so they sum to 100% (independent pools each carry
+  // overround, so their raw prices do not add up on their own).
+  const onchainSum = RESULT_ORDER.reduce((s, leg) => s + (legs[leg]?.yesPrice ?? 0), 0) || 1;
+  const shownPct = (leg) =>
+    live?.[leg] != null ? live[leg] : legs[leg] ? legs[leg].yesPrice / onchainSum : null;
   return (
-    <div className={`mr-card${group.state === "trading" ? "" : " mr-card-closed"}`}>
+    <div className={`mr-card${tradeable ? "" : " mr-card-closed"}`}>
       <div className="mr-card-head">
         <span className="mr-flags"><Flag team={home} size={18} /><Flag team={away} size={18} /></span>
         <span className="mr-fixture">{home} <span className="mr-v">v</span> {away}</span>
         <VerifiedBadge fixtureId={group.fixtureId} />
         {result
           ? <span className="display mr-score">{result.home}<span className="mr-score-dash">–</span>{result.away}<span className="mr-ft">FT</span></span>
-          : <span className="mono mr-kind">Match result</span>}
+          : <span className="mono mr-kind">{pending ? "Full time" : koLabel(group.kickoff)}</span>}
       </div>
-      <div className="mr-outcomes">
-        {RESULT_ORDER.map((leg) => {
-          const m = legs[leg];
-          const shown = m ? m.yesPrice : (live?.[leg] ?? null);
-          const clickable = m && group.state === "trading";
-          const won = winner === leg;
-          const cls = winner ? (won ? " mr-out-won" : " mr-out-lost") : "";
-          return (
-            <button key={leg} className={`mr-outcome mr-outcome-${leg}${cls}`} disabled={!clickable} onClick={() => clickable && onOpen(m.address)}>
-              <span className="mr-outcome-name">{label[leg]}</span>
-              {winner
-                ? <span className="display mr-outcome-pct">{won ? "WON" : "—"}</span>
-                : <span className="display mr-outcome-pct">{shown != null ? `${Math.round(shown * 100)}%` : "–"}</span>}
-              {!winner && <div className="mr-outcome-bar"><span className="mr-outcome-fill" style={{ width: `${Math.round((shown ?? 0) * 100)}%` }} /></div>}
-            </button>
-          );
-        })}
-      </div>
+      {pending ? (
+        <div className="mr-pending mono">Match played. Awaiting the settlement proof from TxLINE.</div>
+      ) : (
+        <div className="mr-outcomes">
+          {RESULT_ORDER.map((leg) => {
+            const m = legs[leg];
+            const shown = shownPct(leg);
+            const clickable = m && tradeable;
+            const won = winner === leg;
+            const cls = winner ? (won ? " mr-out-won" : " mr-out-lost") : "";
+            return (
+              <button key={leg} className={`mr-outcome mr-outcome-${leg}${cls}`} disabled={!clickable} onClick={() => clickable && onOpen(m.address)}>
+                <span className="mr-outcome-name">{label[leg]}</span>
+                {winner
+                  ? <span className="display mr-outcome-pct">{won ? "WON" : "lost"}</span>
+                  : <span className="display mr-outcome-pct">{shown != null ? cents(shown) : "–"}</span>}
+                {!winner && shown > 0 && <span className="mono mr-outcome-payout">wins {(1 / shown).toFixed(2)}x</span>}
+                {!winner && <div className="mr-outcome-bar"><span className="mr-outcome-fill" style={{ width: `${Math.round((shown ?? 0) * 100)}%` }} /></div>}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="mr-foot">
-        {live
+        {live && tradeable
           ? <span className="mr-live"><span className="mr-live-dot" />Live line {Math.round(live.home * 100)} · {Math.round(live.draw * 100)} · {Math.round(live.away * 100)}</span>
-          : <span className="mr-foot-muted">{result ? "Settled from the TxLINE result" : "Settled on a TxLINE proof"}</span>}
-        <span className="mono mr-foot-liq">{usd(fromUsdc(group.liquidity))} in play</span>
+          : <span className="mr-foot-muted">{result ? "Settled from the TxLINE result" : pending ? "Full time. Awaiting settlement." : "Settled on a TxLINE proof"}</span>}
+        <span className="mono mr-foot-liq">{vol(fromUsdc(group.liquidity))} in play</span>
       </div>
     </div>
   );
@@ -326,7 +343,7 @@ function MarketDetail({ market, wallet, isEmbedded, onBack, onTraded }) {
           <h2 className="display mkt-hero-title">{m.home} v {m.away}</h2>
           <span className={`mono mkt-hero-state${m.state === "trading" ? " mkt-hero-state-live" : ""}`}>{m.state === "trading" ? "open" : m.state}</span>
         </div>
-        <p className="mkt-hero-q"><span className="mkt-hero-kind">{d.kind}</span> {d.question} <span className="mkt-hero-settle">Settled on a TxLINE proof, not a grader.</span></p>
+        <p className="mkt-hero-q"><span className="mkt-hero-kind">{d.kind}</span> {d.question}</p>
         <div className="mkt-hero-prob">
           <div className="mkt-bar mkt-bar-lg">
             <span className="mkt-bar-yes mkt-bar-anim" style={{ width: `${yesPct}%` }} />
@@ -452,11 +469,7 @@ function CreateMarket({ wallet, setNotice, onCreated, onCancel }) {
         </>
       )}
 
-      <p className="create-terms">
-        <strong>{preview?.question}</strong> Settled on a TxLINE Merkle proof through the same
-        validate_stat check as every fischio market, so a corners or cards prop resolves
-        trustlessly, with no grader and no dispute window.
-      </p>
+      <p className="create-terms"><strong>{preview?.question}</strong></p>
       <div className="amm-create-actions">
         <button className="create-submit" disabled={busy} onClick={create}>{busy ? "Submitting…" : "Open market"}</button>
         <button className="mkt-back" onClick={onCancel}>cancel</button>

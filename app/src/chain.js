@@ -141,10 +141,22 @@ async function decodeSettleInto(ticket) {
     const ours = compiled.find((ix) => ix.pi === progIdx);
     const decoded = readProgram.coder.instruction.decode(ours.data);
     if (decoded?.name === "settle") {
-      const a = decoded.data.statA.statToProve;
-      const b = decoded.data.statB?.statToProve;
+      const d = decoded.data;
+      const a = d.statA.statToProve;
+      const b = d.statB?.statToProve;
       ticket.provenLeaves = b ? [a, b] : [a];
       if (b) ticket.finalScore = [a.value, b.value];
+      // The full Merkle proof travels inside the settle instruction bytes, so the
+      // settlement is re-verifiable from chain alone (see ProofPanel / verifyProof.js).
+      ticket.proof = {
+        meta: { home: ticket.home, away: ticket.away, settleSig: ticket.settleSig },
+        statA: { statToProve: a, eventStatRoot: d.statA.eventStatRoot, statProof: d.statA.statProof },
+        statB: b
+          ? { statToProve: b, eventStatRoot: d.statB.eventStatRoot, statProof: d.statB.statProof }
+          : null,
+        subTreeProof: d.fixtureProof,
+        eventsSubTreeRoot: d.fixtureSummary?.eventsSubTreeRoot,
+      };
     }
   } catch {
     // receipt still renders with sig + parties; leaves stay empty if decode fails

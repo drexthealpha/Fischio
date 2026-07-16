@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-11T12:50:58.236Z",
+  "generatedAt": "2026-07-16T20:09:09.992Z",
   "fixtures": [
     {
       "id": 17588325,
@@ -186,6 +186,24 @@
       "home": "France",
       "away": "Spain",
       "kickoff": "2026-07-14T19:00:00.000Z"
+    },
+    {
+      "id": 18241006,
+      "home": "England",
+      "away": "Argentina",
+      "kickoff": "2026-07-15T19:00:00.000Z"
+    },
+    {
+      "id": 18257865,
+      "home": "France",
+      "away": "England",
+      "kickoff": "2026-07-18T21:00:00.000Z"
+    },
+    {
+      "id": 18257739,
+      "home": "Spain",
+      "away": "Argentina",
+      "kickoff": "2026-07-19T19:00:00.000Z"
     }
   ]
 }

@@ -28,6 +28,7 @@ const SERVICES = [
   ["ingest", "services/ingest/server.mjs", { PORT: "8795" }],
   ["api", "services/api/server.mjs", { PORT: "8790", RPC }],
   ["keeper", "bot/odds-keeper.mjs", { RPC, INGEST }],
+  ["seed", "deploy/seed-loop.mjs", { RPC, INGEST }],
   ["relayer", "services/relayer/server.mjs", { RPC }],
   ["sponsor", "services/sponsor/server.mjs", { RPC }],
   ["indexer", "services/indexer/server.mjs", { RPC }],

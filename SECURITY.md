@@ -185,3 +185,13 @@ It spends only on bounded, safe onboarding steps, and it checks every instructio
   does, while keeping the accuracy record this program already tracks.
 - Fiat on-ramp and off-ramp need a licensed partner. That is an integration task, and there
   is no program to write for it.
+- Score corrections after full time are not handled. The finality gate accepts terminal
+  periods {5, 10, 13}; TxLINE's current guidance keys final settlement on `game_finalised`
+  (statusId 100). Both anchor on-chain. The open question is corrections: if a result is
+  amended after full time (a goal disallowed on review, an abandoned-then-replayed match),
+  there is no confirmed guarantee that finalisation is exactly-once per fixture and stat, no
+  strictly monotonic timestamp to order a correction after the original, and no documented
+  challenge window. fischio settles once at full time and cannot re-settle a correction. An
+  institutional version needs a challenge window keyed to a monotonic anchor timestamp, which
+  depends on TxODDS confirming those semantics; until they do, monotonic correction ordering
+  should not be baked into settlement.

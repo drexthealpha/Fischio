@@ -14,10 +14,12 @@ Pages). Only the Node services below run on Wispbyte.
 - **ingest** (port 8795) holds the TxLINE odds and scores streams open and polls the snapshots
 - **api** (port 8790) serves markets, books, and prices to the app
 - **keeper** trades the AMM back to the live TxLINE line whenever the odds move
+- **seed** refreshes the fixture list and opens a 1X2 market for any upcoming match the moment
+  TxLINE prices it, so the board fills itself with no human step
 - **relayer** and **sponsor** power gasless trading and zero-SOL onboarding
 - **indexer** records trade history
 
-On a small free box, run the core three first: set `FISCHIO_SERVICES=ingest,api,keeper`.
+On a small free box, run the core four first: set `FISCHIO_SERVICES=ingest,api,keeper,seed`.
 
 ## Steps
 
@@ -39,6 +41,26 @@ On a small free box, run the core three first: set `FISCHIO_SERVICES=ingest,api,
 6. **Expose the API** so the app can reach it. Note the public host and port the panel gives
    the container, then point the app at it with `VITE_API` and `VITE_INGEST` in the app's host
    (Vercel/Netlify env), for example `VITE_API=https://<your-box>:8790`.
+
+## The front end on Vercel
+
+The app is a static Vite build with two serverless functions (`app/api/fixtures.js` and
+`app/api/scores.js`) that call TxLINE with your credentials, so the browser never sees a token.
+
+1. **Import the repo** on Vercel and set the **Root Directory** to `app`.
+2. **Build** is `npm run build`, output `dist` (Vercel detects Vite).
+3. **Environment variables:**
+   - `VITE_RPC` = your Helius devnet URL (on-chain reads).
+   - `VITE_INGEST` = the public Wispbyte ingest URL, for the live 1X2 line, e.g.
+     `https://<your-box>:8795`.
+   - `TXLINE_JWT`, `TXLINE_API_TOKEN` = read by the serverless functions so live fixtures and
+     scores work without a wallet or a token in the browser. These match the judge instruction
+     that the demo runs with no wallet and no fees.
+4. **Deploy.** The board reads fixtures and scores from its own `/api/*`, the live line from
+   `VITE_INGEST`, and everything else straight from chain.
+
+The two halves meet at one seam: the front end points `VITE_INGEST` at the Wispbyte box, and the
+Wispbyte seed loop opens the markets that box's ingest priced. Nothing else connects them.
 
 ## Check it is live
 

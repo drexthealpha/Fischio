@@ -1,45 +1,46 @@
-/* DESIGN.md tokens: the only source of visual truth. */
+/* DESIGN.md tokens: the only source of visual truth. A crisp, high-contrast markets look:
+   white cards on a soft cool page, near-black ink, a confident emerald accent, and three
+   strong outcome hues so a football result reads at a glance. */
 :root {
-  /* warm paper-and-ink ramp */
-  --g0: #fbfaf7;
-  --g1: #f4f2ec;
-  --g2: #e9e6dd;
-  --g3: #d6d2c4;
-  --g4: #b3aea0;
-  --g5: #8a8578;
-  --g6: #6b675c;
-  --g7: #4a4740;
-  --g8: #262420;
-  --g9: #141310;
+  /* cool neutral ramp */
+  --g0: #ffffff;
+  --g1: #f3f4f7;
+  --g2: #e6e8ee;
+  --g3: #d3d7e0;
+  --g4: #aab1bf;
+  --g5: #818997;
+  --g6: #59616f;
+  --g7: #383f4b;
+  --g8: #191d25;
+  --g9: #0a0d13;
 
-  /* one accent: pitch green, interactive/live/settled only */
-  --pitch: #1b7a3d;
-  --pitch-hover: #166332;
-  --pitch-tint: #eaf3ed;
+  /* one accent: emerald, interactive/live/settled only */
+  --pitch: #0a8f5b;
+  --pitch-hover: #077a4d;
+  --pitch-tint: #e6f6ee;
 
   --font-display: "IBM Plex Sans Condensed", sans-serif;
   --font-body: "IBM Plex Sans", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
-  --shadow-ticket: 0 1px 2px rgb(20 19 16 / 0.06);
-  --shadow-moment: 0 4px 16px rgb(20 19 16 / 0.12);
+  --shadow-ticket: 0 1px 2px rgb(10 13 19 / 0.05);
+  --shadow-moment: 0 10px 34px -10px rgb(10 13 19 / 0.24);
 
-  /* a football result has three outcomes: give each its own hue so the card reads at a glance.
-     home keeps the pitch green; draw is a warm neutral; away is a calm blue. */
-  --home: #1b7a3d; --home-tint: #e7f2ec;
-  --draw: #9a6b12; --draw-tint: #f5efe1;
-  --away: #235ea6; --away-tint: #e6eef7;
+  /* a football result has three outcomes: give each its own hue. home is the emerald brand,
+     draw a warm amber, away a calm blue. */
+  --home: #0a8f5b; --home-tint: #e6f6ee;
+  --draw: #b5730a; --draw-tint: #fbefda;
+  --away: #2563eb; --away-tint: #e8eefe;
 
-  /* softer, more product-like surfaces than the 2px receipt corners */
-  --radius-card: 14px;
+  --radius-card: 16px;
   --radius-el: 10px;
-  --shadow-card: 0 1px 2px rgb(20 19 16 / 0.05), 0 8px 24px -10px rgb(20 19 16 / 0.16);
-  --shadow-hover: 0 2px 4px rgb(20 19 16 / 0.06), 0 14px 32px -12px rgb(20 19 16 / 0.22);
+  --shadow-card: 0 1px 2px rgb(10 13 19 / 0.04), 0 4px 12px -4px rgb(10 13 19 / 0.07), 0 14px 30px -14px rgb(10 13 19 / 0.13);
+  --shadow-hover: 0 2px 6px rgb(10 13 19 / 0.06), 0 20px 44px -16px rgb(10 13 19 / 0.24);
 }
 
 * { box-sizing: border-box; margin: 0; }
 
-html { background: var(--g1); } /* tinted page so white cards lift off it */
+html { background: var(--g1); } /* soft cool page so white cards lift off it */
 
 body {
   font-family: var(--font-body);
@@ -47,6 +48,7 @@ body {
   line-height: 1.5;
   color: var(--g8);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection { background: var(--pitch-tint); }
@@ -55,7 +57,7 @@ body {
 .display {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   color: var(--g9);
   font-variant-numeric: tabular-nums;
 }
@@ -68,18 +70,18 @@ body {
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   color: var(--g6);
 }
 
 button {
   font: inherit;
   cursor: pointer;
-  border-radius: 2px;
-  transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
+  border-radius: 8px;
+  transition: background-color 130ms ease, border-color 130ms ease, color 130ms ease, box-shadow 130ms ease, transform 130ms ease;
 }
 
 input, select {
   font: inherit;
-  border-radius: 2px;
+  border-radius: 8px;
 }

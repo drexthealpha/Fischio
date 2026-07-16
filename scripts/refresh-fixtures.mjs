@@ -18,7 +18,7 @@ try {
 
 const today = Math.floor(Date.now() / 86400000);
 const days = [];
-for (let d = today - 12; d <= today + 2; d++) days.push(d); // wide window so nothing is missed
+for (let d = today - 12; d <= today + 5; d++) days.push(d); // wide window: past results plus the next upcoming fixtures
 for (const day of days) {
   const r = await fetch(`${API}/api/fixtures/snapshot?startEpochDay=${day}`, { headers: h });
   if (!r.ok) continue;
