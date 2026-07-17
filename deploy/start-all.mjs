@@ -21,12 +21,18 @@ import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const RPC = process.env.RPC ?? "https://api.devnet.solana.com";
-const INGEST = process.env.INGEST ?? "http://127.0.0.1:8795";
+
+// A hosted panel hands the container one allocated port (Pterodactyl and Wispbyte expose it as
+// SERVER_PORT). The ingest is the service the front end must reach, so it takes that port by
+// default; otherwise it falls back to the local dev port.
+const INGEST_PORT = process.env.INGEST_PORT ?? process.env.SERVER_PORT ?? "8795";
+const API_PORT = process.env.API_PORT ?? "8790";
+const INGEST = process.env.INGEST ?? `http://127.0.0.1:${INGEST_PORT}`;
 
 // name, entry file, extra env. Order puts the ingest first so the keeper finds a live line.
 const SERVICES = [
-  ["ingest", "services/ingest/server.mjs", { PORT: "8795" }],
-  ["api", "services/api/server.mjs", { PORT: "8790", RPC }],
+  ["ingest", "services/ingest/server.mjs", { PORT: INGEST_PORT }],
+  ["api", "services/api/server.mjs", { PORT: API_PORT, RPC }],
   ["keeper", "bot/odds-keeper.mjs", { RPC, INGEST }],
   ["seed", "deploy/seed-loop.mjs", { RPC, INGEST }],
   ["relayer", "services/relayer/server.mjs", { RPC }],
