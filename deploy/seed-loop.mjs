@@ -6,7 +6,7 @@
 // the markets on its own.
 //
 //   node deploy/seed-loop.mjs        (usually run by deploy/start-all.mjs)
-//   env: SEED_EVERY_MS (default 600000), RPC, INGEST, and the day1/ credentials + wallet.
+//   env: SEED_EVERY_MS (default 600000), RPC, INGEST, and the local/ credentials + wallet.
 import { spawn } from "node:child_process";
 
 const EVERY_MS = Number(process.env.SEED_EVERY_MS ?? 10 * 60_000);

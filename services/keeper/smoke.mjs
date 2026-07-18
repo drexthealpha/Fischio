@@ -7,7 +7,7 @@ import { createMint, getOrCreateAssociatedTokenAccount, mintTo, TOKEN_PROGRAM_ID
 
 const BN = anchor.BN, U = 1_000_000;
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
-const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("day1/devnet-wallet.json", "utf8"))));
+const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("local/devnet-wallet.json", "utf8"))));
 const idl = JSON.parse(readFileSync("services/api/idl/fischio_exchange.json", "utf8"));
 const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(payer), { commitment: "confirmed" });
 anchor.setProvider(provider);
@@ -50,7 +50,7 @@ console.log("maker quote before:", Number((await program.account.openOrders.fetc
 
 // run the keeper's own tick() once against this validator
 process.env.RPC = "http://127.0.0.1:8899";
-process.env.KEEPER_KEY = "day1/devnet-wallet.json";
+process.env.KEEPER_KEY = "local/devnet-wallet.json";
 const { tick } = await import("./server.mjs");
 await tick();
 

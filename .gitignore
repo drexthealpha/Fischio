@@ -4,13 +4,13 @@ target/
 test-ledger*/
 dist/
 
-# day1/ is dev scratch: secrets, TxLINE-owned data, and one-off probe scripts. Keep it local.
-day1/
+# local/ is dev scratch: secrets, TxLINE-owned data, and one-off probe scripts. Keep it local.
+local/
 
 # secrets: keypairs and API credentials never enter the public repo
-day1/devnet-wallet.json
-day1/credentials.json
-day1/actors-*.json
+local/devnet-wallet.json
+local/credentials.json
+local/actors-*.json
 # defensive: any Solana keypair or service key file, anywhere, is a secret
 **/*-keypair.json
 **/*-key.json
@@ -21,25 +21,25 @@ day1/actors-*.json
 # local run artifacts
 live.log
 live-full.log.bak
-day1/*.html
-day1/history-*.json
+local/*.html
+local/history-*.json
 test-results.txt
 txline-app-screenshot.png
 
 # TxLINE Data is licensed and must not be redistributed in a public repo (their terms 7.1).
 # Keep the captured proofs, score snapshots, daily-roots dumps, and their program binary
-# local only; each user fetches their own under their own TxLINE access (day1/ scripts do it).
+# local only; each user fetches their own under their own TxLINE access (local/ scripts do it).
 test-fixtures/
-day1/final-proofs.json
-day1/proof-*.json
-day1/*snapshot*.json
-day1/scores-*.json
+local/final-proofs.json
+local/proof-*.json
+local/*snapshot*.json
+local/scores-*.json
 # their API spec, scraped docs, and reference integration code (keep local, do not publish)
-day1/openapi.yaml
-day1/worldcup.txt
-day1/worldcup-code.txt
-day1/subscription-tiers.txt
-day1/onchain-validation-code.txt
+local/openapi.yaml
+local/worldcup.txt
+local/worldcup-code.txt
+local/subscription-tiers.txt
+local/onchain-validation-code.txt
 
 # internal docs kept out of the public repo (README.md + docs/SECURITY.md are the public set)
 docs/VIDEO-SCRIPT.md
@@ -51,6 +51,12 @@ app/DESIGN.md
 keeper-upload/
 keeper-upload.zip
 .claude/
+# scratch tooling and TxLINE's converted OpenAPI spec. _spec.json is local/openapi.yaml as JSON,
+# which is their licensed data (terms 7.1) and must never be committed; the _*.mjs are one-off
+# probe scripts. Underscore-prefixed root files are dev scratch by convention.
+/_*.mjs
+/_*.json
+
 services/relayer/relayer-key.json
 services/sponsor/sponsor-key.json
 services/indexer/index.db

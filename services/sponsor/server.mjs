@@ -27,7 +27,7 @@ const FUSDC = process.env.FUSDC ?? "rRsB6zN2rht5b2CdEFArhosMdaKVLyX7uePLfuAYHc9"
 const here = dirname(fileURLToPath(import.meta.url));
 const RPC = process.env.RPC ?? "https://api.devnet.solana.com";
 const PORT = Number(process.env.PORT ?? 8793);
-const KEY_PATH = process.env.SPONSOR_KEY ?? join(here, "..", "..", "day1", "devnet-wallet.json");
+const KEY_PATH = process.env.SPONSOR_KEY ?? join(here, "..", "..", "local", "devnet-wallet.json");
 const connection = new Connection(RPC, "confirmed");
 const sponsor = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(KEY_PATH, "utf8"))));
 

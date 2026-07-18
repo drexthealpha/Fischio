@@ -18,6 +18,7 @@ import { readFileSync } from "node:fs";
 import {
   TXORACLE_ID, TERMINAL_PERIODS, summaryOf, statA, statB, epochDayOf, rootsPda, nodes,
 } from "../lib/proof-marshal.mjs";
+import { fullTimeRow, latest, statusNow } from "../lib/scores.mjs";
 
 // config: CLI flag first, then env var (WAGER, RPC, KEYPAIR, API...), then default.
 // Env support exists so the same file runs unchanged on a headless host (Wispbyte).
@@ -28,19 +29,19 @@ const arg = (name, dflt) => {
 };
 const WAGER = new PublicKey(arg("wager"));
 const RPC = arg("rpc", "http://127.0.0.1:8899");
-const KEYPAIR = arg("keypair", "day1/devnet-wallet.json");
+const KEYPAIR = arg("keypair", "local/devnet-wallet.json");
 const API = arg("api", "https://txline-dev.txodds.com");
 const IDL_PATH = arg("idl", "target/idl/wc_settle.json");
 const POLL_MS = 20_000;         // feed re-check while match is live
 const ROOT_LAG_MS = 5 * 60_000; // devnet oracle posts roots lazily (~45 min worst observed)
 
-// TxLINE credentials: env first (hosted keeper), day1/credentials.json fallback (local)
+// TxLINE credentials: env first (hosted keeper), local/credentials.json fallback (local)
 const fileCreds = (() => {
-  try { return JSON.parse(readFileSync("day1/credentials.json", "utf8")); } catch { return {}; }
+  try { return JSON.parse(readFileSync("local/credentials.json", "utf8")); } catch { return {}; }
 })();
 const jwt = process.env.TXLINE_JWT ?? fileCreds.jwt;
 const apiToken = process.env.TXLINE_API_TOKEN ?? fileCreds.apiToken;
-if (!jwt || !apiToken) throw new Error("TxLINE credentials missing: set TXLINE_JWT and TXLINE_API_TOKEN or provide day1/credentials.json");
+if (!jwt || !apiToken) throw new Error("TxLINE credentials missing: set TXLINE_JWT and TXLINE_API_TOKEN or provide local/credentials.json");
 const headers = { Authorization: `Bearer ${jwt}`, "X-Api-Token": apiToken };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (msg) => console.log(`[${new Date().toISOString()}] ${msg}`);
@@ -80,10 +81,13 @@ async function findTerminalSeq() {
       const records = body.trimStart().startsWith("[")
         ? JSON.parse(body)
         : body.split("\n").filter((l) => l.startsWith("data: {")).map((l) => JSON.parse(l.slice(6)));
-      const terminal = records.find((r) => TERMINAL_PERIODS.includes(r.StatusId));
+      // Full time, specifically, read through lib/scores.mjs so this bot cannot disagree with
+      // the rest of the product about when a match ended. See settle-market.mjs for why the
+      // previous records.find over terminal statuses was wrong in two separate ways.
+      const terminal = fullTimeRow(records);
       if (terminal) return terminal.Seq;
-      const last = records.at(-1);
-      if (last) log(`match not over: seq=${last.Seq} status=${last.StatusId ?? "?"} clock=${last.Clock?.Seconds ?? "?"}s`);
+      const last = latest(records);
+      if (last) log(`match not over: seq=${last.Seq} status=${statusNow(records) ?? "?"}`);
     }
     await sleep(POLL_MS);
   }

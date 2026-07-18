@@ -9,10 +9,10 @@ one of the off-chain services (Node). This guide gets you from a clone to a pass
 - Rust with the Solana platform tools (SBF toolchain), Anchor 0.31.1
 - Agave / solana-test-validator on your PATH (the test scripts expect it)
 - Node 20 or newer
-- A funded devnet keypair at `day1/devnet-wallet.json` for anything that touches devnet
+- A funded devnet keypair at `local/devnet-wallet.json` for anything that touches devnet
 - TxLINE access (free World Cup tier). The proof packages, score snapshots, daily-roots
   dumps, and the cloned oracle binary under `test-fixtures/` are licensed TxLINE Data, so
-  they are not committed. Regenerate them locally under your own access with the `day1/`
+  they are not committed. Regenerate them locally under your own access with the `local/`
   fetch scripts before running the proof-settlement suites.
 
 ## Layout
@@ -20,8 +20,16 @@ one of the off-chain services (Node). This guide gets you from a clone to a pass
 - `programs/` five Anchor programs: `wc-settle`, `market`, `exchange`, `multi`, `oracle`
 - `app/` the React front end (Vite)
 - `services/` the off-chain layer: `ingest` (all 18 TxLINE endpoints), `api`, `indexer`, `relayer`, `sponsor`, `rewards`
-- `bot/` the permissionless keepers and the in-play market maker
+- `bot/` the permissionless keepers and the agents: `inplay-mm` (market maker), `steam-agent`
+  (sharp-movement detector), `backtest` (replays a match and scores the forecasts), `copy-agent`
+  (follow a trader), `settle-bot` and `settle-market`, `prove-odds`
+- `lib/` the shared logic the bots, services and CLI all read, so none of them can disagree about
+  what the feed said: `txline` (feed client), `scores`, `markets`, `market-link` (feed market to
+  on-chain market), `amm`, `scoring`, `guard` (durable spend caps and breakers), and the proof
+  marshalling for stats, odds, fixtures and V3 multiproofs
+- `cli/fischio.mjs` the command line tool
 - `tests/` one adversarial suite per program, run against a local validator
+- `test/` the suite that needs no validator, which is what CI runs
 - `scripts/` local validator launchers, seeders, and one-off tools
 
 ## Build and test a program
@@ -45,7 +53,29 @@ green, and that includes the adversarial cases as well as the happy path.
 
 The app reads market and book lists from the API, so a client never needs an RPC that allows
 `getProgramAccounts`. Point services at your own RPC with the `RPC` env var, and the app with
-`VITE_RPC` in `app/.env.local`. See `.env.example`.
+`VITE_RPC` in `app/.env.local`. See `.env.example`. A gitignored `.env` at the repo root is loaded
+by `lib/env.mjs`, and anything already in the environment wins over it, so a shell export or a
+deploy panel always overrides the file.
+
+## Run the agents
+
+Every agent takes `--shadow`, which logs each decision and sends nothing. Use it first.
+
+    node bot/inplay-mm.mjs --fixture <id> --shadow     # quote both sides off the real line
+    node bot/steam-agent.mjs                           # journal sharp line moves
+    node bot/steam-agent.mjs --score                   # score that journal against proven results
+    node bot/backtest.mjs --fixture <id>               # replay a match, score the forecasts
+    node bot/copy-agent.mjs --leaderboard              # rank traders by realised profit
+
+The two agents that commit money, the market maker and the copy agent, hold a daily ceiling and a
+circuit breaker in `lib/guard.mjs` that persist to disk. That is deliberate: a limit kept only in
+memory resets to zero on the restart that made it matter, so a crash loop would re-fund every
+market on each boot. If you add an agent that spends, give it a guard.
+
+The fastest test loop needs no validator and no chain:
+
+    npm test            # the CI suite
+    npm run test:amm    # the AMM property and fuzz suite on its own
 
 ## House rules
 

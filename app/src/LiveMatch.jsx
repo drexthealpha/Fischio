@@ -6,9 +6,11 @@
 // it says so and shows nothing it cannot stand behind.
 import { useEffect, useState } from "react";
 import Flag from "./Flag.jsx";
-import { UPCOMING, fetchLiveScores } from "./chain.js";
+import { fetchLiveScores } from "./chain.js";
+import { useFixtures } from "./useFixtures.js";
 import { fetchLiveLine } from "./market.js";
 import { fmtCountdown } from "./data.js";
+import Lineups from "./Lineups.jsx";
 
 // TxLINE status ids, from the real feed (RECON.md). live = the ball is in play, done = a
 // terminal phase where the result is final.
@@ -23,8 +25,9 @@ const PHASE = {
 };
 
 export default function LiveMatch() {
-  const games = UPCOMING ?? [];
-  const [fixtureId, setFixtureId] = useState(games[0]?.id);
+  // Live schedule, including matches already under way, which is the whole point of this view.
+  const { fixtures: games } = useFixtures({ includeStarted: true });
+  const [fixtureId, setFixtureId] = useState(null);
   const fixture = games.find((f) => f.id === fixtureId) ?? games[0] ?? null;
   const [line, setLine] = useState(null); // real demargined { home, draw, away }
   const [score, setScore] = useState(null); // real { statusId, goals:[h,a], clockSeconds }
@@ -106,7 +109,7 @@ export default function LiveMatch() {
         <div className="livecard-top">
           <span className="live-team"><Flag team={fixture.home} size={24} /> {fixture.home}</span>
           {goals
-            ? <span className="display live-score">{goals[0]}<span className="live-dash">–</span>{goals[1]}</span>
+            ? <span className="display live-score">{goals[0]}<span className="live-dash">-</span>{goals[1]}</span>
             : <span className="display live-score live-score-tbd">v</span>}
           <span className="live-team live-away">{fixture.away} <Flag team={fixture.away} size={24} /></span>
         </div>
@@ -140,6 +143,8 @@ export default function LiveMatch() {
           <div className="live-feedwait mono">Live odds open as kickoff approaches.</div>
         )}
       </div>
+
+      {fixture?.id && <Lineups fixtureId={fixture.id} />}
     </div>
   );
 }

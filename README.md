@@ -1,162 +1,159 @@
 # fischio
 
-*Il fischio finale* means the final whistle. That is when a match ends, and on fischio it is
-when the money moves.
+*Il fischio finale* means the final whistle. That is when a match ends, and on fischio it is when the money moves.
 
-fischio is a decentralized prediction market on Solana for the World Cup. You can bet a
-friend head to head, trade YES and NO shares against a pool, or work a real order book. When
-the match ends, a signed proof of the score pays the winners on-chain. Five programs run the
-whole thing, all deployed to devnet, all reachable straight from your wallet.
+## The problem
 
-The programs do the work themselves. They match orders on-chain and settle on a cryptographic
-proof of the real result. Anyone can trigger a payout, and anyone can crank a fill, so the
-system keeps running even when every server we run is down.
+You bet that Spain v Argentina will have more than nine corners. The match ends with eleven.
 
-## The five programs
+Who decides you won?
 
-| Program | Devnet address | What it does |
-|---|---|---|
-| wc-settle | `FVVSa2AcwxBdmtKxFHiZMmd2ceRWorh7ZDdppvPsPvxb` | Head-to-head escrow. Two people lock stakes on a match, and a proof of the final score pays the winner. |
-| market | `AweLznQDPzt9UXKhon6X8iKgvrd5dX4Ru36ddnuRirKZ` | An AMM for YES/NO shares. Trade against a pool any time, even with nobody else online. |
-| exchange | `7PtxtGEGwBsSNRcRDsP4pedkQkzpGLZNv92Ndc9WwgrE` | A price-time order book. Rest a limit order, cross the book, or both. |
-| multi | `8zVnp7ivs5fSdmjYFHTLChrSzbKnDeKX6mj5nuP1CAgg` | Markets with more than two outcomes. One event, many outcomes, exactly one winner. |
-| oracle | `HUXM89x5Uxex2XfTh58i2xXzroeULgtuq7w3tT7zzYpJ` | An optimistic oracle for questions sports data cannot answer. Propose a result, dispute it with a bond, or let the window close. |
+On every prediction market you can use today, a person decides. Someone at the company reads the official match report, types the number in, and the market pays out. That is why a corners bet can sit unsettled for hours after the whistle, and why the rules tell you to open a dispute if you disagree with the number. The company is both the house and the referee.
 
-Here is a real settlement you can check yourself: wager
-`9KS3z6joNRFvLNF1rYck6C3U3xR2CZcNzHvTsCQSwKQq` (USA v Bosnia & Herzegovina, 2-0), settled by
-`3wu6mTNQFkQogmJZGMqRaKwAvDAyRcKFk3BYFYXTePK3hWni2tNjV6Qp8hTAvGqATKvyMe1FWkniLAt4jcw7ppKf`.
-Open the transaction and you can see the inner call into the oracle that verified the score
-before any money moved.
+Polymarket and Kalshi both settle sports props this way. It is not laziness. There has never been a way for a program to know the real corner count on its own.
 
-You do not have to take our word for the maths either. The Settlement view has a **verify it
-yourself** panel: it reads the Merkle proof out of the settle transaction, hashes the raw score
-in your browser with the Web Crypto API, and shows it reproduces the exact root TxLINE committed
-on-chain. Change a goal in the panel and the root diverges, which is why a forged score cannot
-settle. No server, no library, no trust in us.
+fischio removes the person.
+
+TxODDS, the company that supplies the match data, publishes a fingerprint of that data onto Solana every five minutes. A fingerprint is a short code computed from the data. Change one number anywhere in the data and the code comes out completely different, so the code is a promise about what the data said at that moment.
+
+When the match ends, anyone can send one transaction that carries the corner count plus the maths showing it matches the published fingerprint. The program checks that maths itself and pays the winner. No employee is involved. There is no dispute window. It is one transaction, and it costs about a fifth of a cent in compute.
+
+That is the whole idea. Everything else in this repo exists to make that one thing work.
+
+## Why this is harder than it sounds
+
+Anyone can read a score. Knowing that a score is **final** is the hard part.
+
+Say a striker scores in the 49th minute. Right then, the data honestly says 1-0. A cheat could grab a completely genuine proof of "1-0", wait for nothing, and try to settle a bet with it. The match might still finish 2-0. The proof is real and the settlement is wrong.
+
+Dispute windows and trusted resolvers fix this by adding back a human, which is the thing we are trying to delete.
+
+TxLINE hashes the match phase into every provable record. So one proof carries both the score and the fact that the match is over. Our program only accepts a record from a terminal phase, meaning full time, after extra time, or after penalties. A genuine 49th-minute proof is worthless to an attacker because the program rejects it before it ever looks at the money.
+
+We wrote 20 adversarial tests that attack this exact path with real captured proofs, including that 49th-minute case and a mid-shootout case. They all pass.
+
+## Three things we can prove
+
+**The match.** Before you stake anything, that this is a real fixture, with those two teams, in that competition, kicking off at that time. This one is easy to skip and it matters more than it looks. Proving a score is worth nothing if the match was invented. Anyone can list a game that was never scheduled, take your money, and then settle it from a genuine proof of a different game. Every hash checks out and you still lose. So the schedule gets proven too.
+
+**The price.** Every market shows you odds. Where did those odds come from? Today you take the operator's word for it. TxLINE publishes a fingerprint of its odds as well, and the on-chain oracle exposes a `validate_odds` check against it. So fischio can prove the price you traded was the genuine line at that moment, and not a number we made up.
+
+**The result.** Covered above. The score, the corner count, the cards, all settled from a proof.
+
+## Check it yourself
+
+Do not take our word for any of the three. Check them:
+
+```
+npx fischio verify fixture 18257739   # is that a real match?
+npx fischio verify price 18257739     # is that the real price?
+npx fischio verify result 18241006    # is that the real score?
+npx fischio verify all 18257739       # all three
+```
+
+Each command sends a transaction to a program TxODDS deployed, which fischio does not own and cannot change. It folds the proof against the fingerprint TxODDS published before you asked, and prints the transaction so anyone can repeat it. If our servers lie, these fail. If our servers are switched off, these still work.
+
+```
+$ fischio verify result 18241006
+England v Argentina  1-2  (full time)
+
+Checking the claim "Argentina won" against the record TxODDS published on Solana.
+
+  verified  Argentina won, 1-2
+            https://explorer.solana.com/tx/4SjZ6L3g8CCH8sUJdxhJkUfpSqzx5Cj2wqabiM6tCqAfCZR1e3qNhXFY71vtLCSomAkQwhgocKKXGLiWe4U2tbcg?cluster=devnet
+```
+
+That transaction took the two goal totals, subtracted one from the other, and checked the answer against the fingerprint. No person graded that match, and we could not have changed the answer.
+
+Every one of the 29 markets we quote on the final can be checked the same way, not only the headline one:
+
+```
+fischio verify price 18257739 --all
+```
+
+## See it settle
+
+Here is a real settlement on devnet. Paraguay 0-1 France, fixture 18188721, settled by transaction
+`4aUjDEjNj56dpduQwR7ctHk4r14E1axV7jxYctEbRYUHMQSrc4DaqQ7fLcHcisM7n37bKDDLK8FwbpakYrJizKxw`.
+
+Open it and you can see the inner call into the TxODDS oracle that checked the score before any money moved. The wallet that submitted it has no special permission. It earned a small tip for doing the work.
+
+The app goes further. On the Settlement page, click "verify this settlement in your browser" on any result. It pulls the proof out of the settlement transaction, hashes the score in your own browser using the crypto built into your machine, and shows it landing on the exact fingerprint TxODDS published. Then change a goal in the panel and watch the code stop matching. That is why a forged score cannot take the money.
 
 ## What you can trade
 
-- **Match result (1X2)**: every match is a three-way market, Home, Draw, and Away, shown side
-  by side. Each outcome opens at the live demargined line from TxLINE, not at 50/50, and a
-  keeper holds the on-chain price on that line as the odds move. Buy any outcome and the price
-  moves with your trade, and you can cash out any time.
-- **Props**: total goals, total corners, and total yellow cards, each with an over/under line.
-  Every prop reads a TxLINE stat key (goals 1/2, cards 3/4, corners 7/8) and settles on the
-  same proof as the match winner. A corners bet resolves from a cryptographic proof in one
-  transaction, with no human grader and no waiting period. Polymarket and Kalshi settle the
-  same props by human review.
-- **Order book**: post a limit order at your own price, or take an order that is already
-  resting. Price and time decide who matches, and the rule runs inside the program.
-- **Complete sets**: `split` turns one dollar of collateral into one YES share plus one NO
-  share, and `merge` turns them back. This lets you mint a set and sell one side on the order
-  book, which is how you provide two-sided liquidity by hand. A complete set is always worth
-  exactly one dollar, so the vault always covers every share.
-- **Multi-outcome events**: back one outcome out of many. A `convert` action turns a full set
-  of NO positions into the complement's YES position and frees the rest of your collateral.
-
-## Zero to trading in one click
-
-A first-time visitor needs no extension and no SOL.
-
-- **Instant wallet**: fischio generates an embedded wallet in the browser. It signs in to the
-  backend with Sign-In With Solana, so a signature is the whole login and there is no password
-  to steal. The design leaves a clean seam to swap in a managed wallet like Privy later.
-- **Gasless trading**: a relayer pays the network fee. It signs only as the fee payer and has
-  no authority over any account, and it will only pay for fischio instructions.
-- **Sponsored onboarding**: a new wallet still needs rent for its own accounts. An onboarding
-  sponsor pays that rent for the specific account-creation steps a user authorizes, and those
-  accounts belong to the user. We proved the whole path on devnet: an unfunded generated
-  wallet became a live trading account while its balance stayed at zero.
-
-## Why finality is the hard part
-
-Anyone can read a score. Knowing it is final is the hard part. A real proof of "1-0" pulled
-in the 49th minute is dangerous to an escrow, because the match can still end 2-0. The usual
-fixes, dispute windows and challenge bonds and trusted resolvers, all add back the trust that
-an escrow is meant to remove.
-
-fischio settles on data from TxLINE (TxODDS). TxLINE anchors match data to Solana with Merkle
-roots every five minutes and hashes the live match phase into every provable leaf. One proof
-carries both the score and the fact that the match is over. The program accepts a leaf only
-from a terminal phase (full time, after extra time, after penalties). It rejects everything
-else before the oracle call runs: a wrong fixture, a wrong stat, a mid-match total, a
-mid-shootout leaf, a spliced event, the wrong roots account. A tampered value dies inside the
-oracle's own Merkle check. Twenty adversarial tests attack the money path with real captured
-proofs, and all twenty pass.
-
-## No trusted operator
-
-Every settlement path in every program is open to anyone. Whoever submits a valid proof
-settles the wager or resolves the market, and earns a small tip for doing it. The exchange
-goes further: matching pushes each fill credit into an on-chain queue, so one order can cross
-any number of resting orders, and a permissionless crank pays the queue out later. We run a
-keeper for convenience, and it holds no special power. If our keeper goes down, any wallet can
-call the same instructions by hand. If nobody settles at all, wc-settle's refund path opens at
-expiry and both sides get their stakes back. Correctness never depends on us staying online.
-
-## An autonomous market maker
-
-`bot/inplay-mm.mjs` takes its fair value straight from TxLINE. It reads the demargined 1X2
-line from the odds endpoint, uses the home probability as the fair price of a home-win share,
-and quotes a bid just below and an ask just above it on the order book. When the line moves,
-the bot re-quotes. Nothing is modelled or simulated: if the odds feed has no line yet, the bot
-holds and quotes nothing. It runs only on a real fixture, logs every decision, and every quote
-it makes is a public on-chain order.
-
-## The live data layer
-
-fischio runs an always-on ingestion service that holds TxLINE's odds and scores streams open
-and polls its snapshots, so the platform stays live to within the feed's own refresh. It uses
-every one of TxLINE's 18 endpoints for a real purpose, and exposes a status page at `/endpoints`
-that reports the last call and result for all 18, so "we use all of TxLINE" is something you
-can check rather than take on trust.
-
-The odds-keeper reads the demargined 1X2 line for each match and trades the AMM back onto it
-whenever the odds move, so the price you see is the live consensus and never a stale 50/50. It
-is permissionless: it holds no special key, and every correction is a public on-chain trade.
-
-The TxLINE endpoints fischio uses, all 18:
-
-- **Live feeds**: fixtures snapshot and updates; odds snapshot, per-fixture and windowed odds
-  updates, and the odds stream; scores snapshot, per-fixture and windowed scores updates, the
-  scores stream, and historical scores.
-- **Verification**: fixtures validation and batch validation, odds validation, and stat
-  validation, the Merkle-proof primitive that settles every market.
-- **Access**: guest sign-in, plus token activation and purchase quote, which unlock other
-  leagues beyond the free World Cup tier.
+- **Match result.** Home, Draw, or Away, priced from the live demargined TxLINE line. Each outcome opens at the real line, never at a flat 50/50, and a keeper holds the on-chain price on that line as the odds move.
+- **Props.** Total goals, total corners, total yellow cards, each with an over or under line. Every prop reads a TxLINE stat key and settles on the same proof as the match result. This is the sharpest thing here: a corners bet resolves from a proof in one transaction, with no human grader and no waiting.
+- **Head to head.** Lock a stake against one other person on one match. The final whistle pays the winner.
+- **Complete sets.** Turn one dollar into one Yes share plus one No share, and back again. A complete set is always worth exactly one dollar, so the vault always covers every share.
 
 ## Run it
 
-Front end (Vite and React, browse with no server):
+The command line tool, which needs no wallet for anything that only reads:
+
+    npm install
+
+    fischio matches                    # what is on, and when
+    fischio board 18257739             # every price we quote on a match
+    fischio quote 18257739 --type totals --line 2.5 --side over --stake 50   # what a bet costs and pays
+    fischio replay 18257739 --as-of 3h # the same board as it stood three hours ago
+    fischio traders                    # who is profitable, computed from public trades
+    fischio health                     # is the data feed answering
+
+    fischio verify fixture 18257739    # is this a real match, with these teams and this kickoff
+    fischio verify schedule            # is a whole hour of the schedule real, in one proof
+    fischio verify price 18257739      # is this the price TxODDS published, or one we made up
+    fischio verify result 18241006     # is this the score, once the match is over
+    fischio verify all 18257739        # all three at once
+
+`replay` is worth a moment. The feed lets you ask what the board looked like at any past instant, so you can see how the price moved into a goal rather than only where it landed. Add `--json` to any command to pipe it somewhere.
+
+The same reads are an HTTP API if you would rather not use the terminal. Every market, book, settlement, and proof is a plain JSON route, with a WebSocket for live updates. See [API.md](API.md).
+
+The agents, which run on the same data and take no instruction once started:
+
+    node bot/inplay-mm.mjs --fixture 18257739 --shadow    # quote both sides off the real line
+    node bot/steam-agent.mjs                              # flag sharp line moves, journal them
+    node bot/steam-agent.mjs --score                      # score that journal against proven results
+    node bot/backtest.mjs --fixture 18241006              # replay a match and score the forecasts
+    node bot/copy-agent.mjs --leaderboard                 # who is profitable, from public trades
+    node bot/copy-agent.mjs --leader <wallet> --allocation 500 --shadow
+
+`--shadow` on any of them logs every decision and sends nothing, so you can watch what an agent
+would do before it is allowed to do it. The market maker and the copy agent hold a durable spend
+cap and a circuit breaker that survive a restart, because a limit kept only in memory resets to
+zero on the reboot that made it matter.
+
+Copy trading is worth a note. It works elsewhere because trades are public. What is usually
+missing is the other half: a leader's wins were decided by a resolver you have to trust. Here the
+trade is an on-chain transaction and the result it settled against carries a proof, so a track
+record is arithmetic over public data rather than a claim this project makes about a trader.
+
+The app:
 
     cd app && npm install && npm run dev
 
-Settle any active wager yourself, which is the whole point of an open settle instruction:
+Settle any active wager yourself, which is the point of an open settle instruction:
 
     npm install
     node bot/settle-bot.mjs --wager <address> --rpc https://api.devnet.solana.com
 
-Resolve a prediction market the same way, by proof, the moment its match ends:
+Resolve a prediction market the same way, the moment its match ends:
 
     node bot/settle-market.mjs --market <address> --rpc https://api.devnet.solana.com
 
-Run the in-play market maker on a real fixture (it quotes the demargined TxLINE line):
+Run the in-play market maker on a real fixture. It takes its fair value from the demargined TxLINE line, quotes both sides on the order book, and re-quotes when the line moves:
 
     node bot/inplay-mm.mjs --fixture <id>
 
-Keep every AMM price on the live line (with the ingestion service running):
+Hold every pool price on the live line:
 
-    node bot/odds-keeper.mjs                 # trades the AMM back to the TxLINE line as odds move
+    node bot/odds-keeper.mjs
 
-The backend services (point them at your RPC with the `RPC` env var; see `.env.example`):
+The backend services, or all of them at once with the supervisor:
 
-    node services/ingest/server.mjs    # TxLINE ingestion, all 18 endpoints, live, on :8795
-    node services/api/server.mjs       # discovery, depth, settlements, trending, on :8790
-    node services/indexer/server.mjs   # trade history and PnL, on :8792
-    node services/relayer/server.mjs   # gasless fee-payer relay, on :8791
-    node services/sponsor/server.mjs   # onboarding rent sponsor, on :8793
-    node services/rewards/server.mjs   # maker liquidity-rewards scorer, on :8794
-    node services/keeper/server.mjs    # crank that pays out queued exchange fills
+    node deploy/start-all.mjs          # ingest, api, keeper, seed, relayer, sponsor, indexer
+    node services/ingest/server.mjs    # TxLINE ingestion on :8795
 
 Adversarial suites, one program at a time, against a local validator:
 
@@ -166,52 +163,64 @@ Adversarial suites, one program at a time, against a local validator:
     scripts/start-multi-validator.ps1     && node --test tests/multi.test.mjs
     scripts/start-oracle-validator.ps1    && node --test tests/oracle.test.mjs
 
-## Repository map
+## Getting in with no wallet
 
-    programs/wc-settle/   escrow state machine, finality gates, oracle call
-    programs/market/      the AMM for YES/NO shares, and every prop market type
-    programs/exchange/    order book, price-time matching, async fill queue
-    programs/multi/       multi-outcome markets, convert, single-winner resolve
-    programs/oracle/      optimistic resolution: propose, dispute, arbitrate, claim
-    services/ingest/      TxLINE ingestion: all 18 endpoints, live streams, /endpoints proof page
-    services/api/         discovery, depth, settlements, trending, over REST and WebSocket
-    services/indexer/     persisted trade history and per-market cost-basis PnL
-    services/relayer/     gasless fee-payer relay
-    services/sponsor/     onboarding rent sponsor for zero-SOL embedded wallets
-    services/rewards/     scores resting maker liquidity by tightness and size
-    services/keeper/      crank that pays out queued exchange fills
-    bot/settle-bot.mjs    open wc-settle keeper, runs anywhere
-    bot/inplay-mm.mjs     autonomous in-play market maker on the TxLINE feed
-    bot/odds-keeper.mjs   keeps every AMM price on the live TxLINE 1X2 line
-    bot/settle-market.mjs permissionless proof-settlement for the AMM markets, fires at full time
-    bot/live-relay.mjs    read-only log tail and chain reads for the live UI
-    app/                  markets, order book, portfolio, and settlement views
-    deploy/               always-on supervisor and the Wispbyte deploy guide
-    tests/                adversarial suites, one file per program
-    SECURITY.md           the money invariant each program holds, and how to report a bug
+A first-time visitor needs no browser extension and no SOL.
 
-The wc-settle settle transaction costs 204,162 compute units, about 15 percent of Solana's
-limit, with proof verification and payout included.
+Click "Start instantly" and fischio makes a wallet inside your browser. That wallet is your account, so there is no email, no password, and no signup form. A relayer pays the network fee, and a sponsor pays the small rent a new account needs on Solana. We proved the whole path on devnet: an unfunded wallet became a live trading account while its balance stayed at zero.
 
-## Status
+The relayer can only pay fees. It has no authority over any account and it refuses to sign anything that is not a fischio instruction.
 
-Devnet beta. Every program is deployed and covered by an adversarial suite: 20 cases for
-wc-settle, 7 for the AMM, 8 for the exchange, 4 for multi-outcome, and 6 for the oracle. All
-pass. Stakes are devnet SOL and test tokens, and nothing is audited yet, so keep real money
-out of it for now. fischio uses TxLINE by TxODDS for verified match data. TxLINE's credit
-token is used only to authorize data access, and it never touches user funds.
+## How it works
 
-Live now: three-way match-result markets that open at the demargined TxLINE line, a keeper that
-holds each price on that line as the odds move, and the ingestion service using all 18 TxLINE
-endpoints. Still open: a full visual pass on the app, an always-on deploy, and mainnet USDC
-behind an audit. The settlement and matching engines do not change for any of it.
+Five programs, all deployed to devnet, all reachable straight from a wallet.
+
+| Program | Devnet address | What it does |
+|---|---|---|
+| wc-settle | `FVVSa2AcwxBdmtKxFHiZMmd2ceRWorh7ZDdppvPsPvxb` | Head to head escrow. Two people lock stakes, a proof of the final score pays the winner. |
+| market | `AweLznQDPzt9UXKhon6X8iKgvrd5dX4Ru36ddnuRirKZ` | The pool you trade against. Buy an outcome any time, even with nobody else online. |
+| exchange | `7PtxtGEGwBsSNRcRDsP4pedkQkzpGLZNv92Ndc9WwgrE` | A price-time order book, matched on-chain. |
+| multi | `8zVnp7ivs5fSdmjYFHTLChrSzbKnDeKX6mj5nuP1CAgg` | Events with more than two outcomes. Exactly one winner. |
+| oracle | `HUXM89x5Uxex2XfTh58i2xXzroeULgtuq7w3tT7zzYpJ` | A fallback for questions the match data cannot answer. Propose a result, dispute it with a bond. |
+
+Nobody has an admin key. Every authority is a program address that signs for its own vault, so no human can move user funds in any program. `SECURITY.md` states the one money invariant each program holds and how it is enforced.
+
+Settlement is open to anyone in every program. Whoever submits a valid proof settles the market and earns a small tip. We run a keeper because it is convenient, and it holds no special power. If every server we run goes down, any wallet can call the same instructions by hand, and if nobody settles at all, the refund path opens at expiry and both sides get their stakes back.
+
+## The data underneath
+
+fischio reads TxLINE, the TxODDS feed. An always-on service holds the odds and scores streams open, polls the snapshots, and serves the app.
+
+We use all 18 TxLINE endpoints, and each one has a job:
+
+- **Live feeds.** Fixtures snapshot and updates. Odds snapshot, per-fixture and windowed odds updates, and the odds stream. Scores snapshot, per-fixture and windowed scores updates, the scores stream, and historical scores.
+- **Verification.** Fixtures validation and batch validation, odds validation, and stat validation. Stat validation is the one that settles every market.
+- **Access.** Guest sign-in, token activation, and the purchase quote for service levels above the free World Cup tier.
+
+You do not have to take that on trust. The ingestion service exposes `/endpoints`, which reports the last call and result for all 18.
+
+Getting a reliable list of finished matches and their scores is the part that quietly breaks most projects, because the live stream and snapshot go quiet once a match is over. The final record moves to the historical endpoint. So fischio reads a result from the live feed while a match is on, and from historical once it has ended, which is also how anyone can verify a settled game hours or days later.
+
+TxLINE's access flow runs on Solana, which is what the hackathon means by signing up through Solana. You submit an on-chain subscribe transaction, activate it, and use the API token it returns. Requests then carry two headers, and expired tokens fail quietly with a 401, so our client caches tokens and re-mints them automatically.
+
+## Honest limitations
+
+We would rather you read this than find it out yourself.
+
+- **Nothing here is audited, and it runs on devnet with test tokens.** Do not put real money in it.
+- **The free World Cup tier is delayed by about 60 seconds** (service level 1). Real time needs service level 12. Where the app says a price is live, it is as live as the feed allows, and the app shows the real age of the data so you can judge it.
+- **Score corrections after full time are not handled.** If a goal is disallowed on review after the whistle, fischio has already settled and cannot re-settle. Doing this properly needs a challenge window keyed to a timestamp that only ever moves forward, and that depends on TxODDS confirming those semantics.
+- **The order book is bounded** at 64 orders a side. Fills settle through a queue that anyone can crank, so one order can cross any number of makers, but a production version would raise these bounds and shard the book.
+- **The optimistic oracle still has one arbiter** deciding disputes. It is immutable and every proposer carries an on-chain accuracy record, and the eventual replacement is a bonded token vote.
+- **Fiat on and off ramps need a licensed partner.** That is an integration, and there is no program to write for it.
+- **Player markets are not listed, and this one is not a matter of time.** The record that goes into the fingerprint holds three numbers, a stat key, a value and a period, and a player id is not one of them. So a player market could only ever settle on our say-so, which is the exact thing this product exists to remove. There is a second reason on top of that one: on the free World Cup tier the per-event player fields are not populated anyway. We checked a full finished match and none of its 964 score records carried a scorer or card id. The team lineups do come through, with names, shirt numbers and positions, so a lineup view is real, but "who scored" as provable data is not there. We would rather list fewer markets than list one we have to be trusted on.
+- **Quarter lines carry no fair price.** On an Asian handicap ending in .25 or .75 your stake splits across two lines, and TxODDS publishes no single demargined percentage for them. Around a third of the board is quarter lines. We show the odds and say the fair price is unpublished rather than inventing one.
+- **Only half-goal lines get a pool you can trade.** The board shows every line TxODDS quotes, but a pool opens only on the half-goal ones, over 1.5 or over 2.5, where there is a clean winner. A whole-goal line like over 2.0 refunds on exactly two goals, and a yes or no market has no way to hand your stake back, so those stay on the board as prices for reference and are not tradeable. This is why some cells you see are live and others are marked as coming from the feed only.
+- **The settlement works for any sport, but we can only show it on football.** The proof checks a stat key, a value and a period, and that is the same shape whether the number is goals, points or touchdowns, so the programs would settle a basketball or an NFL market with no new code. We cannot demonstrate that here, because the free tier only carries the World Cup and a few friendlies. We would rather say this plainly than seed a market on data we cannot pull.
+- **Markets settle one at a time.** The oracle proves at most two stats in a single call, so each market is resolved in its own transaction. TxODDS publishes a batched multi-stat package that would let a whole board settle in one call, and the client already reads it, but the deployed oracle exposes no instruction to check it, so we do not claim that path works. Proving the schedule is different and does batch: `fischio verify schedule` checks every fixture in an hour in one proof, because the fixtures side does expose a batch instruction.
 
 ## Contributing and license
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the dev setup and the house rules, and
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before taking part. Copy [.env.example](.env.example)
-for the configuration you need, and never commit a filled-in one.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the dev setup and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before taking part. Copy [.env.example](.env.example) for configuration, and never commit a filled-in one.
 
-fischio is released under the [Business Source License 1.1](LICENSE). The source is public,
-and you may read it, self-host it, and contribute. You may not run it as a competing
-commercial prediction market until the change date, when it converts to Apache 2.0.
+fischio is released under the [Business Source License 1.1](LICENSE). The source is public. You may read it, self-host it, and contribute. You may not run it as a competing commercial prediction market until the change date, when it converts to Apache 2.0.

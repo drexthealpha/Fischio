@@ -39,11 +39,11 @@ export default function Ticket({ wager, live, stats }) {
           <span className="display board-team"><Flag team={wager.home} size={22} /> {wager.home}</span>
           {wager.finalScore ? (
             <span className="display board-score">
-              {wager.finalScore[0]}–{wager.finalScore[1]}
+              {wager.finalScore[0]}-{wager.finalScore[1]}
             </span>
           ) : showLive ? (
             <span className="display board-score">
-              {live.goals[0]}–{live.goals[1]}
+              {live.goals[0]}-{live.goals[1]}
             </span>
           ) : (
             <span className="display board-score board-score-tbd">v</span>

@@ -12,14 +12,14 @@ import { createMint, getOrCreateAssociatedTokenAccount, mintTo } from "@solana/s
 
 const RPC = process.env.RPC ?? "https://api.devnet.solana.com";
 const connection = new Connection(RPC, "confirmed");
-const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("day1/devnet-wallet.json", "utf8"))));
+const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("local/devnet-wallet.json", "utf8"))));
 const U = 1_000_000; // 6 decimals, matches real USDC
 
 const mint = await createMint(connection, payer, payer.publicKey, null, 6);
 const ata = (await getOrCreateAssociatedTokenAccount(connection, payer, mint, payer.publicKey)).address;
 await mintTo(connection, payer, mint, ata, payer, 100_000_000 * U); // 100M fUSDC, faucet supply
 
-writeFileSync("day1/devnet-usdc.json", JSON.stringify({ mint: mint.toBase58(), faucetOwner: payer.publicKey.toBase58(), decimals: 6 }, null, 2));
+writeFileSync("local/devnet-usdc.json", JSON.stringify({ mint: mint.toBase58(), faucetOwner: payer.publicKey.toBase58(), decimals: 6 }, null, 2));
 console.log("fischio devnet test-USDC mint:", mint.toBase58());
 console.log("faucet balance:", 100_000_000, "fUSDC in", ata.toBase58());
-console.log("saved to day1/devnet-usdc.json");
+console.log("saved to local/devnet-usdc.json");

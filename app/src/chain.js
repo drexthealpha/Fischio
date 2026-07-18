@@ -11,8 +11,18 @@ const params = new URLSearchParams(window.location.search);
 export const RPC = params.get("rpc") ?? import.meta.env.VITE_RPC ?? "https://api.devnet.solana.com";
 export const connection = new Connection(RPC, "confirmed");
 
+// Names for fixtures we have already seen, so a ticket rendered from chain state can show
+// "Spain v Argentina" instead of an id. refreshFixtures replaces this from the live feed.
 export const FIXTURES_BY_ID = new Map(fixturesFile.fixtures.map((f) => [f.id, f]));
-export const UPCOMING = fixturesFile.fixtures.filter((f) => new Date(f.kickoff) > new Date());
+
+// The schedule that shipped with this build. It is a cold start and nothing more.
+//
+// This used to be exported as UPCOMING and three views imported it directly as the list of
+// matches, which is why the app kept showing games that had already been played. A file cannot
+// know the schedule; it only knows what the schedule looked like when someone last ran the
+// refresh script. Ask useFixtures() instead, which paints this on the first frame and then
+// replaces it with the feed. Nothing prices or settles off this.
+export const COLD_START_FIXTURES = fixturesFile.fixtures;
 
 const BN = anchor.BN;
 
@@ -205,7 +215,8 @@ export async function refreshFixtures() {
     for (const f of fixtures) FIXTURES_BY_ID.set(f.id, f);
     return fixtures.filter((f) => new Date(f.kickoff) > new Date());
   } catch {
-    return UPCOMING; // bundled snapshot; refreshed at build time by scripts/refresh-fixtures.mjs
+    // The feed is unreachable, so fall back to the cold start and let the caller say so.
+    return COLD_START_FIXTURES.filter((f) => new Date(f.kickoff) > new Date());
   }
 }
 

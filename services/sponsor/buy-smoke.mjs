@@ -7,7 +7,7 @@ import { getOrCreateAssociatedTokenAccount, getAccount } from "@solana/spl-token
 const RPC = process.env.RPC ?? "https://api.devnet.solana.com";
 const SPONSOR = process.env.SPONSOR ?? "http://127.0.0.1:8793";
 const connection = new Connection(RPC, "confirmed");
-const funder = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("day1/devnet-wallet.json", "utf8"))));
+const funder = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("local/devnet-wallet.json", "utf8"))));
 const { sponsor: sponsorStr, fusdc } = await (await fetch(`${SPONSOR}/sponsor`)).json();
 const sponsorPk = new PublicKey(sponsorStr);
 const fusdcMint = new PublicKey(fusdc);

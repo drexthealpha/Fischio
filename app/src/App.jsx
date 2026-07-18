@@ -12,6 +12,8 @@ import Live from "./Live.jsx";
 import Portfolio from "./Portfolio.jsx";
 import LiveMatch from "./LiveMatch.jsx";
 import LiveFeed from "./LiveFeed.jsx";
+import Status from "./Status.jsx";
+import Traders from "./Traders.jsx";
 import { PROGRAM_ID, DEVNET_USDC } from "./data.js";
 import { connection } from "./chain.js";
 import SolLink from "./SolLink.jsx";
@@ -23,7 +25,9 @@ const params = new URLSearchParams(window.location.search);
 const LIVE_MODE = params.has("live");
 const LIVE_WAGER = params.get("wager");
 
-const VIEWS = ["Predictions", "Live", "Wagers", "Settlement", "Portfolio"];
+// The primary nav is user tasks only. System status is a developer and judge surface (endpoint
+// health, deployed programs), reached from the live-data pill in the header, not competing here.
+const VIEWS = ["Predictions", "Live", "Wagers", "Settlement", "Portfolio", "Traders"];
 
 export default function App() {
   const [view, setView] = useState(LIVE_MODE ? "Settlement" : "Predictions");
@@ -50,7 +54,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <LiveFeed />
+        <LiveFeed onOpen={() => setView("Status")} />
         {pubkey && <HeaderBalance pubkey={pubkey} />}
         <SessionArea connected={connected} embeddedOn={embeddedOn} onInstant={enableEmbedded} />
       </header>
@@ -65,6 +69,8 @@ export default function App() {
       {view === "Predictions" && <Market />}
       {view === "Settlement" && (LIVE_MODE ? <Live wagerAddress={LIVE_WAGER} /> : <Settlement />)}
       {view === "Portfolio" && <Portfolio />}
+      {view === "Status" && <Status />}
+      {view === "Traders" && <Traders />}
 
       <footer className="foot">
         <SolLink account={PROGRAM_ID}>Verified on Solana</SolLink>

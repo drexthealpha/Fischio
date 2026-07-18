@@ -35,8 +35,8 @@ const DRY = has("dry");
 const U = 1_000_000;
 
 const connection = new Connection(RPC, "confirmed");
-const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(join(root, "day1/devnet-wallet.json"), "utf8"))));
-const { mint: usdcStr } = JSON.parse(readFileSync(join(root, "day1/devnet-usdc.json"), "utf8"));
+const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(join(root, "local/devnet-wallet.json"), "utf8"))));
+const { mint: usdcStr } = JSON.parse(readFileSync(join(root, "local/devnet-usdc.json"), "utf8"));
 const usdc = new PublicKey(usdcStr);
 const idl = JSON.parse(readFileSync(join(root, "target/idl/fischio_market.json"), "utf8"));
 const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(payer), { commitment: "confirmed" });

@@ -1,5 +1,5 @@
 // Create + accept a wager on any cluster. Maker and taker are fresh keypairs funded
-// from the day1 wallet; their keys are saved so stakes are never stranded.
+// from the local wallet; their keys are saved so stakes are never stranded.
 // Usage: node scripts/create-wager.mjs --fixture <id> [--rpc <url>] [--stake-sol 0.01] [--expiry-hours 6]
 import * as anchor from "@coral-xyz/anchor";
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
@@ -16,11 +16,11 @@ const RPC = arg("rpc", "https://api.devnet.solana.com");
 const STAKE = Math.round(Number(arg("stake-sol", "0.01")) * LAMPORTS_PER_SOL);
 const EXPIRY_H = Number(arg("expiry-hours", "6"));
 
-const funder = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("day1/devnet-wallet.json", "utf8"))));
-// --maker-day1 / --taker-day1: use the day1 wallet itself as that party (so the
+const funder = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("local/devnet-wallet.json", "utf8"))));
+// --maker-local / --taker-local: use the local wallet itself as that party (so the
 // Account view shows its wagers when that wallet is connected)
-const maker = process.argv.includes("--maker-day1") ? funder : Keypair.generate();
-const taker = process.argv.includes("--taker-day1") ? funder : Keypair.generate();
+const maker = process.argv.includes("--maker-local") ? funder : Keypair.generate();
+const taker = process.argv.includes("--taker-local") ? funder : Keypair.generate();
 const connection = new Connection(RPC, "confirmed");
 
 // fund generated actors: stake + fees + wager account rent headroom
@@ -66,7 +66,7 @@ if (!NO_ACCEPT) {
     .rpc();
 }
 
-const actorsFile = `day1/actors-${wager.toBase58().slice(0, 8)}.json`;
+const actorsFile = `local/actors-${wager.toBase58().slice(0, 8)}.json`;
 writeFileSync(actorsFile, JSON.stringify({
   wager: wager.toBase58(),
   fixture: FIXTURE,

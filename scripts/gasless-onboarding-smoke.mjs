@@ -10,7 +10,7 @@ import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { createMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
-const sponsor = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("day1/devnet-wallet.json", "utf8"))));
+const sponsor = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("local/devnet-wallet.json", "utf8"))));
 const idl = JSON.parse(readFileSync("target/idl/fischio_exchange.json", "utf8"));
 const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(sponsor), { commitment: "confirmed" });
 anchor.setProvider(provider);

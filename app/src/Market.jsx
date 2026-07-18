@@ -1,22 +1,27 @@
 // The AMM prediction markets: a clean list you browse, and a dedicated page you enter when
 // you click one. Fixed-product markets on "home beats away in 90' + ET", traded against a
 // pool. Every number is read live from the deployed program; nothing here is simulated.
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { PublicKey } from "@solana/web3.js";
 import SolLink from "./SolLink.jsx";
 import Flag from "./Flag.jsx";
 import { shortKey, DEVNET_USDC, usd } from "./data.js";
-import { RPC, UPCOMING } from "./chain.js";
+import { RPC } from "./chain.js";
+import { useFixtures } from "./useFixtures.js";
+import MatchBoard from "./MatchBoard.jsx";
+import OrderBook from "./OrderBook.jsx";
 import { useActiveWallet, useWalletBridge } from "./walletBridge.jsx";
 import { prepareEmbedded } from "./relay.js";
 import { ProbabilityChart, MarketActivity } from "./MarketExtras.jsx";
 import Upcoming from "./Upcoming.jsx";
+import Movers from "./Movers.jsx";
 import VerifiedBadge from "./VerifiedBadge.jsx";
 import { AnimatedPct, WinMoment } from "./Animated.jsx";
 import {
   fetchMarkets, fetchPosition, quoteBuy, quoteSell, toUsdc, fromUsdc,
   createMarketTx, addLiquidityTx, buyTx, sellTx, MARKET_PROGRAM_ID,
   MARKET_TEMPLATES, describeMarket, resultLeg, fetchLiveLine, fetchFinalScore,
+  feedKeyOfTerms,
 } from "./market.js";
 
 const pct = (p) => `${(p * 100).toFixed(1)}%`;
@@ -132,9 +137,15 @@ export default function Market() {
 
   const open = markets?.find((m) => m.address === openAddr) ?? null;
 
-  // a market's own page: entered by clicking a card, left by the back link
+  // a market's own page: entered by clicking a card, left by the back link. It also gets the
+  // full set of on-chain markets, so the board can tell which feed lines actually have a pool
+  // and open the right one when a cell is clicked.
   if (open) {
-    return <MarketDetail market={open} wallet={wallet} isEmbedded={isEmbedded}
+    // Key on the address so opening a different market from the board remounts the page with
+    // fresh state. Without it, the detail seeds its working copy from the first market it saw
+    // and a click that changes which market is open leaves the old one on screen.
+    return <MarketDetail key={open.address} market={open} wallet={wallet} isEmbedded={isEmbedded} allMarkets={markets ?? []}
+      onOpenMarket={setOpenAddr}
       onBack={() => { setOpenAddr(null); setNotice(null); }} onTraded={refresh} />;
   }
 
@@ -161,6 +172,7 @@ export default function Market() {
       )}
 
       <Upcoming onOpen={(fid) => { const g = results.find((r) => r.fixtureId === fid); if (g?.legs?.home) setOpenAddr(g.legs.home.address); }} />
+      <Movers />
 
       <div className="amm-cards">
         {liveResults.map((g) => <MatchResultCard key={g.fixtureId} group={g} live={liveLines[g.fixtureId]} onOpen={setOpenAddr} />)}
@@ -194,7 +206,14 @@ function MarketCard({ m, onOpen }) {
       </div>
       <div className="mkt-card-foot">
         <span>{d.yes}</span>
-        <span className="mono">{vol(fromUsdc(m.liquidity))} in play</span>
+        {/* One precise thing: the depth of the pool you trade against, which is the two share
+            reserves added together. It is not a count of anyone's bets and it is not a volume
+            figure. It used to read "in play", which invites you to read it as money other
+            people have staked, and most of it is liquidity we put up ourselves to open the
+            market. Naming it after what it is costs nothing and claims nothing. */}
+        <span className="mono" title="How much liquidity is in the pool you trade against">
+          {vol(fromUsdc(m.liquidity))} in the pool
+        </span>
       </div>
     </button>
   );
@@ -259,8 +278,16 @@ function MatchResultCard({ group, live, result, onOpen }) {
   );
 }
 
+// Map an on-chain market back to the feed line it prices, so the board can mark it tradeable and
+// open it. This delegates to the shared module rather than restating the rule, because the rule
+// changed: the period is carried in the stat key (1 is full match, 1001 is the first half), and
+// a handicap is a subtract with a non-zero threshold. The copy that used to live here recognised
+// neither, so first-half and handicap markets were invisible to the board even once they existed
+// on chain.
+const feedKeyOf = (m) => feedKeyOfTerms(m.fixtureId, m.terms);
+
 // A market's own page: the scoreboard, a big probability, a focused trade panel, and position.
-function MarketDetail({ market, wallet, isEmbedded, onBack, onTraded }) {
+function MarketDetail({ market, wallet, isEmbedded, allMarkets = [], onOpenMarket, onBack, onTraded }) {
   const [m, setM] = useState(market);
   const [position, setPosition] = useState(null);
   const [side, setSide] = useState("yes");
@@ -270,6 +297,19 @@ function MarketDetail({ market, wallet, isEmbedded, onBack, onTraded }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
   const [win, setWin] = useState(null);
+
+  // Which of this match's feed lines have a live pool, and which market each opens. Built from
+  // the on-chain markets for this fixture, keyed by the feed key the board also uses.
+  const tradeable = useMemo(() => {
+    const addrByKey = new Map();
+    for (const om of allMarkets) {
+      if (om.fixtureId !== market.fixtureId) continue;
+      const key = feedKeyOf(om);
+      // prefer the deepest pool when several map to the same line (the 1X2 legs collapse to one)
+      if (key && (!addrByKey.has(key) || (om.liquidity ?? 0) > 0)) addrByKey.set(key, om.address);
+    }
+    return { keys: new Set(addrByKey.keys()), addrByKey };
+  }, [allMarkets, market.fixtureId]);
 
   const reload = useCallback(async () => {
     const all = await fetchMarkets();
@@ -395,7 +435,10 @@ function MarketDetail({ market, wallet, isEmbedded, onBack, onTraded }) {
           )}
           <div className="mkt-meta">
             <div className="microlabel clob-bal-head">Market</div>
-            <div className="mkt-meta-row"><span>In play</span><span className="mono">{usd(fromUsdc(m.liquidity))}</span></div>
+            {/* One precise thing: the depth of the pool you trade against. Not anyone's bets. */}
+            <div className="mkt-meta-row" title="How much liquidity is in the pool you trade against">
+              <span>In the pool</span><span className="mono">{usd(fromUsdc(m.liquidity))}</span>
+            </div>
             <div className="mkt-meta-row"><span>Fee</span><span className="mono">{(m.feeBps / 100).toFixed(1)}%</span></div>
             <div className="mkt-meta-row"><span>On-chain</span><SolLink account={m.address}>Verified on Solana</SolLink></div>
           </div>
@@ -411,16 +454,56 @@ function MarketDetail({ market, wallet, isEmbedded, onBack, onTraded }) {
           <MarketActivity address={m.address} home={m.home} me={wallet?.publicKey?.toBase58()} />
         </div>
       </div>
+
+      {/* The rest of the match. This page used to end here, showing the one market you clicked
+          and giving no sign that TxODDS prices twenty-eight others on the same game. The lines
+          with a live pool are marked and open when clicked; the rest are shown as prices. */}
+      <MatchBoard
+        fixtureId={m.fixtureId} home={m.home} away={m.away}
+        tradeableKeys={tradeable.keys}
+        onTrade={(mkt) => { const addr = tradeable.addrByKey.get(mkt.key); if (addr && onOpenMarket) onOpenMarket(addr); }} />
+
+      {/* The on-chain order book for this market. It exists, it takes limit orders, and it was
+          not reachable from anywhere in the app, which is why clicking a match felt like it did
+          nothing. */}
+      <BookPanel market={m} />
     </div>
   );
 }
 
+/**
+ * The order book, folded into the match page.
+ *
+ * Two ways to trade the same outcome sit side by side here on purpose. The pool always quotes,
+ * so you can take a price with nobody else online. The book lets you name your own price and
+ * wait. Neither is a fallback for the other.
+ */
+function BookPanel({ market }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="mkt-book">
+      <button className="mkt-book-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        {open ? "Hide order book" : "Order book"}
+      </button>
+      {open && (
+        <>
+          <p className="mkt-book-note">Set your own limit price. Orders match on-chain.</p>
+          <OrderBook focusMarket={market} />
+        </>
+      )}
+    </section>
+  );
+}
+
 function CreateMarket({ wallet, setNotice, onCreated, onCancel }) {
-  const [fixtureId, setFixtureId] = useState(UPCOMING[0]?.id);
+  // Live schedule. Opening a market on a match that was played last week is not a cosmetic
+  // problem, so this list has to come from the feed and not from a file in the build.
+  const { fixtures: upcoming, live } = useFixtures();
+  const [fixtureId, setFixtureId] = useState(null);
   const [template, setTemplate] = useState("winner");
   const [line, setLine] = useState(MARKET_TEMPLATES.winner.line);
   const [busy, setBusy] = useState(false);
-  const fixture = UPCOMING.find((f) => f.id === fixtureId) ?? UPCOMING[0];
+  const fixture = upcoming.find((f) => f.id === fixtureId) ?? upcoming[0];
   const tpl = MARKET_TEMPLATES[template];
 
   const pickTemplate = (k) => { setTemplate(k); setLine(MARKET_TEMPLATES[k].line); };
@@ -445,15 +528,16 @@ function CreateMarket({ wallet, setNotice, onCreated, onCancel }) {
     } finally { setBusy(false); }
   };
 
-  if (!fixture) return <p className="empty-state">No upcoming fixtures in the feed. Run scripts/refresh-fixtures.mjs.</p>;
+  if (!fixture) return <p className="empty-state">No matches left to open a market on.</p>;
   return (
     <section className="create amm-create">
       <h2 className="display create-title">Open a prediction market</h2>
 
-      <label className="microlabel create-label" htmlFor="amm-fixture">Fixture</label>
-      <select id="amm-fixture" className="create-input" value={fixtureId} onChange={(e) => setFixtureId(Number(e.target.value))}>
-        {UPCOMING.map((f) => <option key={f.id} value={f.id}>{f.home} v {f.away} · {f.kickoff.slice(0, 16).replace("T", " ")} UTC</option>)}
+      <label className="microlabel create-label" htmlFor="amm-fixture">Match</label>
+      <select id="amm-fixture" className="create-input" value={fixture.id} onChange={(e) => setFixtureId(Number(e.target.value))}>
+        {upcoming.map((f) => <option key={f.id} value={f.id}>{f.home} v {f.away} · {f.kickoff.slice(0, 16).replace("T", " ")} UTC</option>)}
       </select>
+      {!live && <p className="microlabel create-label">Showing the schedule this build shipped with. It may be out of date.</p>}
 
       <div className="microlabel create-label">Market type</div>
       <div className="amm-templates">

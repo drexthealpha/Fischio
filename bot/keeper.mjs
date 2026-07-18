@@ -19,6 +19,7 @@ import { readFileSync } from "node:fs";
 import {
   TXORACLE_ID, TERMINAL_PERIODS, summaryOf, statA, statB, epochDayOf, rootsPda, nodes,
 } from "../lib/proof-marshal.mjs";
+import { fullTimeRow } from "../lib/scores.mjs";
 
 const env = (name, dflt) => process.env[name] ?? dflt;
 const RPC = env("RPC", "https://api.devnet.solana.com");
@@ -27,11 +28,11 @@ const IDL_PATH = env("IDL_PATH", "target/idl/wc_settle.json");
 const SCAN_MS = Number(env("SCAN_MS", "60000")); // full sweep interval
 
 const fileCreds = (() => {
-  try { return JSON.parse(readFileSync("day1/credentials.json", "utf8")); } catch { return {}; }
+  try { return JSON.parse(readFileSync("local/credentials.json", "utf8")); } catch { return {}; }
 })();
 const jwt = env("TXLINE_JWT", fileCreds.jwt);
 const apiToken = env("TXLINE_API_TOKEN", fileCreds.apiToken);
-if (!jwt || !apiToken) throw new Error("set TXLINE_JWT and TXLINE_API_TOKEN (or provide day1/credentials.json)");
+if (!jwt || !apiToken) throw new Error("set TXLINE_JWT and TXLINE_API_TOKEN (or provide local/credentials.json)");
 const headers = { Authorization: `Bearer ${jwt}`, "X-Api-Token": apiToken };
 
 const secret = env("KEYPAIR_JSON") ?? readFileSync(env("KEYPAIR", "keeper/keeper-key.json"), "utf8");
@@ -55,7 +56,9 @@ async function terminalSeqFor(fixtureId) {
     const records = body.trimStart().startsWith("[")
       ? JSON.parse(body)
       : body.split("\n").filter((l) => l.startsWith("data: {")).map((l) => JSON.parse(l.slice(6)));
-    const terminal = records.find((r) => TERMINAL_PERIODS.includes(r.StatusId));
+    // Full time, specifically, read through lib/scores.mjs. See settle-market.mjs for why the
+    // previous records.find over terminal statuses was wrong in two separate ways.
+    const terminal = fullTimeRow(records);
     if (terminal) return terminal.Seq;
   }
   return null;

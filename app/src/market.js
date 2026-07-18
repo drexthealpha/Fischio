@@ -46,15 +46,41 @@ const params = new URLSearchParams(window.location.search);
 const API = params.get("api") ?? import.meta.env.VITE_API ?? "http://127.0.0.1:8790";
 const INGEST = params.get("ingest") ?? import.meta.env.VITE_INGEST ?? "http://127.0.0.1:8795";
 
-// Which leg of a 1X2 match result a market is: home goals minus away goals, compared to zero.
-// Greater than is a home win, equal is a draw, less than is an away win. Anything else (a
-// corners or totals prop, a different stat) is not a result leg and returns null.
-export function resultLeg(terms) {
-  const isSub = terms?.op === "subtract" || terms?.op?.subtract !== undefined;
-  if (!(terms && terms.statAKey === 1 && terms.statBKey === 2 && isSub)) return null;
-  if (Number(terms.threshold) !== 0) return null;
-  const c = terms.comparison;
-  return c === "greaterThan" ? "home" : c === "equalTo" ? "draw" : c === "lessThan" ? "away" : null;
+// Which leg of a 1X2 match result a market is, and how a market's terms map back to the feed.
+//
+// Both used to live here as a second copy of the rule, and the copy had drifted: it required stat
+// keys 1 and 2 exactly, so a first-half result (keys 1001 and 1002) read as "not a result leg" and
+// the board showed it as untradeable. The shared module in lib/ is what the market maker uses to
+// decide which book to quote, so anything the app reasons about independently is a place the two
+// can disagree about what is live.
+export { resultLegOfTerms as resultLeg, feedKeyOfTerms, settleabilityOf, normalizeTerms }
+  from "@shared/market-link.mjs";
+
+/**
+ * The whole board for one match: every market TxODDS prices on it, not just the match result.
+ *
+ * A single fixture carries around 29 markets. The match result is three of them. The rest are
+ * the totals ladder and the handicap ladder, and they only exist because MarketPeriod and
+ * MarketParameters distinguish them. The app used to show the three and drop the other 26.
+ *
+ * Returns { count, ageSeconds, serviceLevel, groups } where groups is keyed by market type,
+ * or null when the ingestion service is not running. ageSeconds is measured from when TxODDS
+ * priced it, not from when we fetched it, which is the number that actually matters on a
+ * service level 1 feed that runs about a minute behind.
+ */
+export async function fetchBoard(fixtureId) {
+  try {
+    const r = await fetch(`${INGEST}/markets/${fixtureId}?group=1`);
+    if (!r.ok) return null;
+    const b = await r.json();
+    return {
+      count: b.count,
+      pricedAt: b.pricedAt,
+      ageSeconds: b.ageSeconds,
+      serviceLevel: b.serviceLevel,
+      groups: b.markets ?? {},
+    };
+  } catch { return null; } // ingestion not running
 }
 
 // The live demargined 1X2 line for a fixture, straight from the ingestion service (the last
@@ -234,7 +260,10 @@ export function describeMarket(terms, home, away) {
   if (leg === "draw") return { kind: "Draw", question: `Will ${home} v ${away} end level?`, yes: "it ends in a draw", no: "not a draw" };
   if (leg === "away") return { kind: "Away win", question: `Will ${away} beat ${home}?`, yes: `${away} wins`, no: `${away} does not win` };
   if (a === 1 && !isAdd) return { kind: "Winner", question: `Will ${home} beat ${away}?`, yes: `${home} wins`, no: `${home} does not win` };
-  if (a === 1 && isAdd)  return { kind: "Total goals", question: `Over ${n} total goals?`, yes: `over ${n} goals`, no: `${n} goals or fewer` };
+  // YES wins iff the total is strictly greater than the threshold, so the real bookmaker line is
+  // the half-goal above it: threshold 2 settles "3 or more", which is the over-2.5 line. Showing
+  // "over 2" would read as if two goals counted, and it does not.
+  if (a === 1 && isAdd)  { const line = n + 0.5; return { kind: "Total goals", question: `Over ${line} goals?`, yes: `over ${line} goals`, no: `under ${line} goals` }; }
   if (a === 7 && isAdd)  return { kind: "Corners", question: `Over ${n} total corners?`, yes: `over ${n} corners`, no: `${n} corners or fewer` };
   if (a === 3 && isAdd)  return { kind: "Cards", question: `Over ${n} yellow cards?`, yes: `over ${n} cards`, no: `${n} cards or fewer` };
   return { kind: "Prop", question: `${home} v ${away}`, yes: "YES", no: "NO" };

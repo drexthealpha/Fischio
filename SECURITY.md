@@ -171,9 +171,35 @@ It spends only on bounded, safe onboarding steps, and it checks every instructio
   that step becomes a real on-ramp and the sponsor faucet is removed.
 - Per-IP rate limiting caps how fast its SOL can be spent.
 
+## The agents
+
+The agents in `bot/` are the only things here that spend without a human present, so their
+failure modes are money failure modes.
+
+- They are non-custodial. Each signs with the operator's own key and holds nobody else's funds.
+  The copy agent mirrors a leader's trades into the operator's wallet and never touches the
+  leader's.
+- Anything that commits collateral goes through `lib/guard.mjs`, which keeps a daily ceiling and a
+  circuit breaker on disk. In-memory limits were the original design and they are wrong for this:
+  the process dies, restarts, believes it has spent nothing, and funds every market again. The
+  breaker trips after repeated failures and needs a deliberate reset, because a run of failures is
+  a reason to look rather than to retry harder.
+- Spend is recorded only after the chain confirms. Counting the intent would let a run of failed
+  sends exhaust an allocation without one position being opened.
+- The market maker refuses to quote a line that has no on-chain market rather than substituting a
+  different one, and it stops quoting the moment a result becomes public knowledge, which is
+  earlier than the moment it becomes provable.
+- Every agent takes `--shadow`, which logs decisions and sends nothing. Run that first when
+  reviewing a change to an agent that spends.
+- The steam agent writes each signal to its journal before the outcome is known, so its hit rate
+  cannot be chosen after the fact. That journal lives under `local/`, which is gitignored, because
+  it holds TxLINE-derived prices their terms do not permit republishing.
+
 ## Known limitations
 
 - Unaudited. Devnet and test tokens only.
+- An agent's risk controls are only as good as the operator's parameters. A ceiling set too high
+  is still a ceiling, and nothing here protects someone from choosing bad numbers.
 - The order book is bounded (64 orders a side). Fills settle through an async event heap
   (128 events) drained by a permissionless crank, so one order can cross any number of
   makers; a production version would raise these bounds and shard the book per market.

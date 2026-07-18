@@ -13,7 +13,7 @@ import { summaryOf, statA, statB, nodes, rootsPda, epochDayOf, TXORACLE_ID } fro
 
 const BN = anchor.BN;
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
-const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("day1/devnet-wallet.json", "utf8"))));
+const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("local/devnet-wallet.json", "utf8"))));
 const idl = JSON.parse(readFileSync("target/idl/fischio_multi.json", "utf8"));
 const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(payer), { commitment: "confirmed" });
 anchor.setProvider(provider);

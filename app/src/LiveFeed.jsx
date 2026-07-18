@@ -1,11 +1,13 @@
 // A small header pill that shows the TxLINE feed is live and how fresh it is, read from the
 // ingestion service. It disappears if the ingest is not running, so it never lies about being
-// live. This makes the data freshness visible on every page rather than a claim.
+// live. Data freshness is the one thing a bettor wants from a status signal, so it sits in the
+// header on every page. Clicking it opens the full system status, which is where the developer
+// and judge detail (all 18 endpoints, the deployed programs) lives, off the main nav.
 import { useEffect, useState } from "react";
 
 const INGEST = new URLSearchParams(window.location.search).get("ingest") ?? import.meta.env.VITE_INGEST ?? "http://127.0.0.1:8795";
 
-export default function LiveFeed() {
+export default function LiveFeed({ onOpen }) {
   const [age, setAge] = useState(null);
 
   useEffect(() => {
@@ -25,10 +27,17 @@ export default function LiveFeed() {
   }, []);
 
   if (age == null) return null;
-  return (
-    <span className="livefeed" title="Live TxLINE data">
+  const label = (
+    <>
       <span className="livefeed-dot" />
       TxLINE live · {age < 60 ? `${age}s` : `${Math.round(age / 60)}m`} ago
-    </span>
+    </>
+  );
+  return onOpen ? (
+    <button type="button" className="livefeed livefeed-btn" onClick={onOpen} title="Data freshness. Click for full system status.">
+      {label}
+    </button>
+  ) : (
+    <span className="livefeed" title="Live TxLINE data">{label}</span>
   );
 }

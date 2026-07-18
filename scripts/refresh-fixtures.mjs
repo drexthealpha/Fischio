@@ -4,7 +4,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 const API = "https://txline-dev.txodds.com";
-const { jwt, apiToken } = JSON.parse(readFileSync("day1/credentials.json", "utf8"));
+const { jwt, apiToken } = JSON.parse(readFileSync("local/credentials.json", "utf8"));
 const h = { Authorization: `Bearer ${jwt}`, "X-Api-Token": apiToken };
 
 // Accumulate: seed from the existing file so names of already-settled fixtures never drop

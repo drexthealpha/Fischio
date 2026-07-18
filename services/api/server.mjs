@@ -15,6 +15,7 @@
 // /trending keeps an in-memory ring buffer of past snapshots to diff against, which
 // resets on restart. That is a real limitation, not a placeholder: the fix is the
 // persisted indexer, tracked separately, not a bigger buffer here.
+import "../../lib/env.mjs"; // load the gitignored root .env (RPC etc.) before anything reads it
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";

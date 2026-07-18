@@ -12,10 +12,18 @@ import {
 } from "./exchange.js";
 
 const pct = (p) => `${(p * 100).toFixed(0)}%`;
-const price2 = (p) => (p == null ? "—" : p.toFixed(2));
+const price2 = (p) => (p == null ? "·" : p.toFixed(2));
 const qty = (n) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
-export default function OrderBook() {
+/**
+ * `focusMarket` opens the book belonging to one market instead of whichever is deepest.
+ *
+ * Without it this screen always selected books[0]. That is fine on a page of its own and wrong
+ * the moment it is embedded under a match, where you click Spain to win and get the book for
+ * some other game. A book record carries the market it belongs to, so the caller can say which
+ * one it means.
+ */
+export default function OrderBook({ focusMarket = null }) {
   const wallet = useAnchorWallet();
   const [books, setBooks] = useState(null); // null = loading
   const [error, setError] = useState(null);
@@ -29,12 +37,19 @@ export default function OrderBook() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
 
-  // discover books once, then hold the selection
+  // Find the book for this exact market, and only this market. There is no fallback to another
+  // book: showing an unrelated market's depth would read as if this market had liquidity when it
+  // does not, which is the mock-data problem this screen exists to avoid. A market with no book
+  // yet renders an honest empty state below.
   useEffect(() => {
     fetchBooks()
-      .then((bs) => { setBooks(bs); if (bs[0]) setActiveAddr(bs[0].address); })
+      .then((bs) => {
+        setBooks(bs);
+        const mine = focusMarket?.address ? bs.find((b) => b.market === focusMarket.address) : null;
+        setActiveAddr(mine ? mine.address : null);
+      })
       .catch((e) => setError(String(e.message ?? e)));
-  }, []);
+  }, [focusMarket?.address]);
 
   const refresh = useCallback(async () => {
     if (!activeAddr) return;
@@ -114,26 +129,14 @@ export default function OrderBook() {
 
       {notice && <div className="notice mono">{notice}</div>}
       {error && <div className="live-error mono">Could not read the exchange: {error}</div>}
-      {books === null && !error && <div className="feed-idle mono">reading books from chain…</div>}
-      {books !== null && books.length === 0 && (
-        <p className="empty-state">
-          No books exist on the exchange yet. Create one with the CLI, and it shows up here the
-          moment it confirms.
-        </p>
-      )}
+      {books === null && !error && <div className="feed-idle mono">reading the book from chain…</div>}
 
-      {books && books.length > 1 && (
-        <div className="clob-picker mono">
-          {books.map((b, i) => (
-            <button
-              key={b.address}
-              className={b.address === activeAddr ? "clob-tab clob-tab-on" : "clob-tab"}
-              onClick={() => setActiveAddr(b.address)}
-            >
-              Book {i + 1} · depth {qty(b.depth)}
-            </button>
-          ))}
-        </div>
+      {/* This market has no book open yet. Honest empty state, never another market's depth. */}
+      {books !== null && !error && !activeAddr && (
+        <p className="empty-state">
+          No resting orders on this market yet. The market maker opens the book when it starts
+          quoting from the TxLINE line, and any limit order you place rests here on-chain.
+        </p>
       )}
 
       {book && (
@@ -141,9 +144,9 @@ export default function OrderBook() {
           <div className="clob-book">
             <div className="clob-topline">
               <div><span className="microlabel">Best bid</span><div className="display clob-big clob-bid">{price2(book.bestBid)}</div></div>
-              <div><span className="microlabel">Spread</span><div className="display clob-big">{book.spread == null ? "—" : book.spread.toFixed(2)}</div></div>
+              <div><span className="microlabel">Spread</span><div className="display clob-big">{book.spread == null ? "·" : book.spread.toFixed(2)}</div></div>
               <div><span className="microlabel">Best ask</span><div className="display clob-big clob-ask">{price2(book.bestAsk)}</div></div>
-              <div><span className="microlabel">Implied</span><div className="display clob-big">{book.mid == null ? "—" : pct(book.mid)}</div></div>
+              <div><span className="microlabel">Implied</span><div className="display clob-big">{book.mid == null ? "·" : pct(book.mid)}</div></div>
             </div>
 
             <div className="clob-ladder mono">

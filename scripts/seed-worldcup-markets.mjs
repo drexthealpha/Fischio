@@ -18,9 +18,11 @@ import { txlineClient, impliedResult } from "../lib/txline.mjs";
 
 const RPC = process.env.RPC ?? "https://api.devnet.solana.com";
 const INGEST = process.env.INGEST ?? "http://127.0.0.1:8795";
+// The fixtures feed filters by a numeric competition id. Sending the name returns a 500.
+const WORLD_CUP = Number(process.env.COMPETITION_ID ?? 72);
 const connection = new Connection(RPC, "confirmed");
-const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("day1/devnet-wallet.json", "utf8"))));
-const { mint: usdcStr } = JSON.parse(readFileSync("day1/devnet-usdc.json", "utf8"));
+const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("local/devnet-wallet.json", "utf8"))));
+const { mint: usdcStr } = JSON.parse(readFileSync("local/devnet-usdc.json", "utf8"));
 const usdc = new PublicKey(usdcStr);
 const idl = JSON.parse(readFileSync("target/idl/fischio_market.json", "utf8"));
 const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(payer), { commitment: "confirmed" });
@@ -99,10 +101,25 @@ async function seedLeg(fx, comparison, targetP) {
   return n / (y + n); // opened price
 }
 
-const fixtures = JSON.parse(readFileSync("app/src/fixtures.json", "utf8")).fixtures;
+// The live schedule, straight from the feed.
+//
+// This used to read app/src/fixtures.json, the snapshot that ships with the app build. Opening
+// markets from a file means the day someone forgets to refresh it, this script happily creates
+// markets on matches that have already been played, and funds them.
 const now = Date.now();
-const upcoming = fixtures.filter((f) => new Date(f.kickoff).getTime() > now + 20 * 60 * 1000).sort((a, b) => a.kickoff.localeCompare(b.kickoff));
-console.log(`${upcoming.length} upcoming fixtures on ${RPC.includes("helius") ? "helius" : RPC}`);
+const today = Math.floor(now / 86_400_000);
+const seen = new Map();
+for (let d = today; d < today + 14; d++) {
+  for (const f of (await tx.fixturesSnapshot(d, WORLD_CUP)) ?? []) {
+    seen.set(f.FixtureId, { id: f.FixtureId, home: f.Participant1, away: f.Participant2, kickoff: new Date(Number(f.StartTime)).toISOString() });
+  }
+}
+// Twenty minutes of headroom, so a market cannot open on a match that is about to kick off.
+const upcoming = [...seen.values()]
+  .filter((f) => new Date(f.kickoff).getTime() > now + 20 * 60 * 1000)
+  .sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+console.log(`${upcoming.length} upcoming fixtures from the live feed on ${RPC.includes("helius") ? "helius" : RPC}`);
+for (const f of upcoming) console.log(`   ${f.id}  ${f.home} v ${f.away}  ${f.kickoff.slice(0, 16).replace("T", " ")}Z`);
 const have = await existingLegs();
 
 // the demargined 1X2 row is intermittent in a single snapshot, so prefer the ingest cache

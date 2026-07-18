@@ -22,10 +22,10 @@ export function makeActor() {
   return Keypair.generate();
 }
 
-// Fund from the genesis-rich day1 wallet (validator started with --mint); the
+// Fund from the genesis-rich local wallet (validator started with --mint); the
 // test-validator faucet is unreliable on Windows and isn't needed.
 const genesisPayer = Keypair.fromSecretKey(
-  Uint8Array.from(JSON.parse(readFileSync("day1/devnet-wallet.json", "utf8")))
+  Uint8Array.from(JSON.parse(readFileSync("local/devnet-wallet.json", "utf8")))
 );
 
 export async function fund(...keypairs) {

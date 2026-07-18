@@ -5,7 +5,7 @@ import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import Ticket from "./Ticket.jsx";
 import CreateWager from "./CreateWager.jsx";
 import SolLink from "./SolLink.jsx";
-import { fetchAllWagers, fetchLiveScores, refreshFixtures, acceptWagerTx, createWagerTx, connection, UPCOMING, RPC } from "./chain.js";
+import { fetchAllWagers, fetchLiveScores, refreshFixtures, acceptWagerTx, createWagerTx, connection, COLD_START_FIXTURES, RPC } from "./chain.js";
 import { lamportsToSol, shortKey } from "./data.js";
 
 export default function Markets() {
@@ -22,7 +22,9 @@ export default function Markets() {
     fetchAllWagers()
       .then((w) => { setWagers(w); setLoadError(null); })
       .catch((e) => setLoadError(String(e.message ?? e)));
-  const [fixtures, setFixtures] = useState(UPCOMING);
+  // Paint the cold start on the first frame so the page is not empty, then replace it with the
+  // live schedule. This view already refreshed; it was only ever seeded from the bundled file.
+  const [fixtures, setFixtures] = useState(() => COLD_START_FIXTURES.filter((f) => new Date(f.kickoff) > new Date()));
   useEffect(() => {
     refreshFixtures().then((f) => { setFixtures(f); load(); });
   }, []);

@@ -6,7 +6,7 @@
 // until it, or any other caller, cranks.
 //
 // It signs as the cranker (pays tx fees only) with a key you provide:
-//   KEEPER_KEY=path/to/key.json   (defaults to day1/devnet-wallet.json for devnet)
+//   KEEPER_KEY=path/to/key.json   (defaults to local/devnet-wallet.json for devnet)
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -17,7 +17,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const RPC = process.env.RPC ?? "https://api.devnet.solana.com";
 const POLL_MS = Number(process.env.POLL_MS ?? 8000);
 const BATCH = Number(process.env.BATCH ?? 16); // events (and distinct makers) per crank tx
-const KEY_PATH = process.env.KEEPER_KEY ?? join(here, "..", "..", "day1", "devnet-wallet.json");
+const KEY_PATH = process.env.KEEPER_KEY ?? join(here, "..", "..", "local", "devnet-wallet.json");
 
 const connection = new Connection(RPC, "confirmed");
 const cranker = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(KEY_PATH, "utf8"))));

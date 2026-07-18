@@ -218,9 +218,56 @@ app.get("/pnl/:wallet", (req, res) => {
   })) });
 });
 
+// Trader leaderboard: every wallet ranked on what it actually did, computed from chain.
+//
+// This is the part a centralised venue cannot honestly offer. Copy trading exists on Polymarket
+// because trades are public there, but the outcome those trades are scored against comes from a
+// resolver you have to trust. Here both halves are verifiable: the trade is an on-chain
+// transaction, and the result it settled against carries a Merkle proof anyone can re-check. A
+// track record is therefore not a claim the platform makes about a trader, it is arithmetic over
+// public data, and anyone can recompute it and get the same answer.
+//
+// Realized profit only. Open positions are excluded because valuing them needs a live price,
+// which would make the table move for reasons the trader had nothing to do with.
+app.get("/leaderboard", (req, res) => {
+  const minTrades = Number(req.query.minTrades ?? 3);
+  const rows = db.prepare("SELECT * FROM amm_trades ORDER BY block_time ASC").all();
+  const byWallet = new Map();
+  for (const r of rows) {
+    const w = byWallet.get(r.wallet) ?? { trades: 0, volume: 0, realized: 0, wins: 0, closed: 0, books: new Map(), lastAt: 0 };
+    w.trades++;
+    w.volume += Math.abs(r.collateral_delta);
+    w.lastAt = Math.max(w.lastAt, r.block_time ?? 0);
+    const b = w.books.get(r.market) ?? { yesQty: 0, yesCost: 0, noQty: 0, noCost: 0 };
+    const spend = -r.collateral_delta;
+    for (const side of ["yes", "no"]) {
+      const delta = side === "yes" ? r.yes_delta : r.no_delta;
+      const qk = `${side}Qty`, ck = `${side}Cost`;
+      if (delta > 0) { b[ck] += spend > 0 ? spend : 0; b[qk] += delta; }
+      else if (delta < 0 && b[qk] > 0) {
+        const avg = b[ck] / b[qk], sold = -delta;
+        const gain = r.collateral_delta - avg * sold;
+        w.realized += gain; w.closed++; if (gain > 0) w.wins++;
+        b[ck] -= avg * sold; b[qk] -= sold;
+      }
+    }
+    w.books.set(r.market, b);
+    byWallet.set(r.wallet, w);
+  }
+  const traders = [...byWallet.entries()]
+    .map(([wallet, w]) => ({
+      wallet, trades: w.trades, volume: w.volume, realizedPnl: w.realized,
+      closedPositions: w.closed, winRate: w.closed ? w.wins / w.closed : null,
+      marketsTraded: w.books.size, lastTradeAt: w.lastAt || null,
+    }))
+    .filter((r) => r.trades >= minTrades)
+    .sort((a, b) => b.realizedPnl - a.realizedPnl);
+  res.json({ traders, note: "realized profit only, computed from on-chain trades; open positions excluded" });
+});
+
 app.listen(PORT, () => {
   console.log(`fischio indexer on http://127.0.0.1:${PORT}`);
-  console.log(`  REST: /health /history/:wallet /pnl/:wallet`);
+  console.log(`  REST: /health /history/:wallet /pnl/:wallet /leaderboard`);
   console.log(`  CLOB order intents index cleanly; exact fill history needs emit! events (not built yet, tracked separately)`);
   tick();
   setInterval(tick, POLL_MS);

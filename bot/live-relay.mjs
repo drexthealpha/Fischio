@@ -21,7 +21,7 @@ const PORT = Number(arg("port", 8787));
 const RPC = arg("rpc", "http://127.0.0.1:8899");
 const API = arg("api", "https://txline-dev.txodds.com");
 
-const { jwt, apiToken } = JSON.parse(readFileSync("day1/credentials.json", "utf8"));
+const { jwt, apiToken } = JSON.parse(readFileSync("local/credentials.json", "utf8"));
 const headers = { Authorization: `Bearer ${jwt}`, "X-Api-Token": apiToken };
 const connection = new Connection(RPC, "confirmed");
 const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(Keypair.generate()), {});

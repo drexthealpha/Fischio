@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import {
   TXORACLE_ID, TERMINAL_PERIODS, summaryOf, statA, statB, epochDayOf, rootsPda, nodes,
 } from "../lib/proof-marshal.mjs";
+import { fullTimeRow, latest, statusNow } from "../lib/scores.mjs";
 
 const arg = (name, dflt) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -20,16 +21,16 @@ const arg = (name, dflt) => {
 };
 const MARKET = new PublicKey(arg("market"));
 const RPC = arg("rpc", "http://127.0.0.1:8899");
-const KEYPAIR = arg("keypair", "day1/devnet-wallet.json");
+const KEYPAIR = arg("keypair", "local/devnet-wallet.json");
 const API = arg("api", "https://txline-dev.txodds.com");
 const IDL_PATH = arg("idl", "target/idl/fischio_market.json");
 const POLL_MS = 20_000;
 const ROOT_LAG_MS = 5 * 60_000; // devnet oracle posts roots lazily
 
-const fileCreds = (() => { try { return JSON.parse(readFileSync("day1/credentials.json", "utf8")); } catch { return {}; } })();
+const fileCreds = (() => { try { return JSON.parse(readFileSync("local/credentials.json", "utf8")); } catch { return {}; } })();
 const jwt = process.env.TXLINE_JWT ?? fileCreds.jwt;
 const apiToken = process.env.TXLINE_API_TOKEN ?? fileCreds.apiToken;
-if (!jwt || !apiToken) throw new Error("TxLINE credentials missing: set TXLINE_JWT and TXLINE_API_TOKEN or provide day1/credentials.json");
+if (!jwt || !apiToken) throw new Error("TxLINE credentials missing: set TXLINE_JWT and TXLINE_API_TOKEN or provide local/credentials.json");
 const headers = { Authorization: `Bearer ${jwt}`, "X-Api-Token": apiToken };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (msg) => console.log(`[${new Date().toISOString()}] ${msg}`);
@@ -60,10 +61,19 @@ async function findTerminalSeq() {
       const records = body.trimStart().startsWith("[")
         ? JSON.parse(body)
         : body.split("\n").filter((l) => l.startsWith("data: {")).map((l) => JSON.parse(l.slice(6)));
-      const terminal = records.find((r) => TERMINAL_PERIODS.includes(r.StatusId));
+      // Full time, specifically, and read through lib/scores.mjs so this bot cannot disagree
+      // with the rest of the product about when a match ended.
+      //
+      // This used to be records.find(r => TERMINAL_PERIODS.includes(r.StatusId)), which had two
+      // ways of being wrong. Array order is not sequence order, so it returned an arbitrary row
+      // among the terminal ones. And a knockout that goes to extra time reaches two terminal
+      // statuses, full time and after-extra-time, carrying different scores. This market settles
+      // on the ninety-minute score, so picking the later one pays out the wrong side. The World
+      // Cup final can go to extra time, so that is not a hypothetical.
+      const terminal = fullTimeRow(records);
       if (terminal) return terminal.Seq;
-      const last = records.at(-1);
-      if (last) log(`match not over: seq=${last.Seq} status=${last.StatusId ?? "?"} clock=${last.Clock?.Seconds ?? "?"}s`);
+      const last = latest(records);
+      if (last) log(`match not over: seq=${last.Seq} status=${statusNow(records) ?? "?"}`);
     }
     await sleep(POLL_MS);
   }

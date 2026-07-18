@@ -5,7 +5,7 @@
 // opening soon.
 import { useEffect, useState } from "react";
 import Flag from "./Flag.jsx";
-import { UPCOMING } from "./chain.js";
+import { useFixtures } from "./useFixtures.js";
 import { fetchLiveLine } from "./market.js";
 import { fmtCountdown } from "./data.js";
 
@@ -15,8 +15,10 @@ const kickoffLabel = (iso, nowMs) => {
 };
 
 export default function Upcoming({ onOpen }) {
-  // genuinely upcoming only: drop matches that already kicked off more than 2 hours ago
-  const games = (UPCOMING ?? []).filter((f) => new Date(f.kickoff).getTime() > Date.now() - 2 * 3600 * 1000).slice(0, 10);
+  // The live schedule. This rail used to read a file that shipped with the build, which is how
+  // matches that had already been played kept showing up here as upcoming.
+  const { fixtures, live } = useFixtures({ includeStarted: true });
+  const games = fixtures.slice(0, 10);
   const [lines, setLines] = useState({});
   const [nowMs, setNowMs] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNowMs(Date.now()), 1000); return () => clearInterval(t); }, []);

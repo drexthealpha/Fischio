@@ -4,7 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test --test-timeout 300000 \"test/**/*.test.mjs\"",
+    "test:proof": "node --test --test-timeout 300000 test/odds-proof-adversarial.test.mjs",
+    "fischio": "node cli/fischio.mjs",
+    "test:scores": "node --test --test-timeout 120000 test/scores.test.mjs",
+    "test:amm": "node --test --test-timeout 120000 test/amm-invariants.test.mjs",
+    "test:canary": "node --test test/the-suite-can-fail.test.mjs"
   },
   "keywords": [],
   "author": "",
@@ -17,5 +22,11 @@
     "axios": "^1.18.1",
     "bs58": "^6.0.0",
     "tweetnacl": "^1.0.3"
-  }
+  },
+  "bin": {
+    "fischio": "./cli/fischio.mjs"
+  },
+  "workspaces": [
+    "services/*"
+  ]
 }

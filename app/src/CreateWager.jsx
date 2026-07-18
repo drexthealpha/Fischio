@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { UPCOMING } from "./chain.js";
+import { useFixtures } from "./useFixtures.js";
 
 const fmt = (f) => ({ id: f.id, home: f.home, away: f.away, kickoff: f.kickoff.slice(0, 16).replace("T", " ") + " UTC" });
 
-export default function CreateWager({ onCreate, busy = false, walletConnected = true, fixtures = UPCOMING }) {
-  const list = fixtures.map(fmt);
+export default function CreateWager({ onCreate, busy = false, walletConnected = true, fixtures = null }) {
+  // The caller can pass a list, and when it does not, use the live schedule rather than the
+  // file that ships with the build. Staking on a match that was played last week is not a
+  // display bug.
+  const { fixtures: live } = useFixtures();
+  const list = (fixtures ?? live).map(fmt);
   const [fixtureId, setFixtureId] = useState(list[0]?.id);
   const [side, setSide] = useState("home");
   const [stake, setStake] = useState("0.01");

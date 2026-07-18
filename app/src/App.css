@@ -1402,3 +1402,164 @@ a.stub-sig-value { display: block; }
   .pf-row-label { font-size: 10px; }
   .pf-phase { margin-left: 0; }
 }
+
+/* ---- The board for one match ---------------------------------------------
+   A trading screen, not a list. One market family at a time behind tabs, an
+   aligned dense table, tradeable lines given weight and feed-only lines kept
+   quiet. Never dress a feed price as tradeable, and never invent a percentage
+   for a split-stake line. */
+.bd { margin-top: 26px; border-top: 1px solid var(--g2); padding-top: 16px; }
+.bd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.bd-tabs { display: inline-flex; gap: 2px; background: var(--g1); border-radius: var(--radius-el); padding: 2px; }
+.bd-tab {
+  font-family: var(--font-body); font-size: 13px; color: var(--g6);
+  background: transparent; border: 0; border-radius: 8px; padding: 6px 14px; cursor: pointer;
+}
+.bd-tab:hover { color: var(--g8); }
+.bd-tab-on { background: var(--g0); color: var(--g9); box-shadow: var(--shadow-ticket); font-weight: 600; }
+.bd-age { font-size: 12px; color: var(--g5); }
+
+.bd-period { margin-bottom: 14px; }
+.bd-period-title { color: var(--g5); margin-bottom: 6px; }
+.bd-table { display: flex; flex-direction: column; }
+
+.bd-row { display: grid; align-items: stretch; gap: 6px; padding: 3px 0; }
+.bd-row-head { padding-bottom: 4px; }
+.bd-colname { font-size: 11px; color: var(--g5); text-align: center; text-transform: uppercase; letter-spacing: 0.03em; }
+.bd-line { font-size: 12px; color: var(--g6); align-self: center; }
+
+.bd-cell {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  padding: 8px 6px; border: 1px solid var(--g2); border-radius: var(--radius-el);
+  background: var(--g0);
+}
+.bd-cell-price { font-size: 16px; line-height: 1.1; }
+.bd-cell-odds { font-size: 10px; color: var(--g5); }
+.bd-cell-live { cursor: pointer; border-color: var(--g3); transition: border-color .1s, background .1s; }
+.bd-cell-live:hover { border-color: var(--pitch); background: var(--pitch-tint); }
+.bd-cell-feed { color: var(--g5); background: var(--g1); border-style: dashed; }
+.bd-cell-feed .bd-cell-price { color: var(--g6); }
+
+/* a split-stake line: quiet, raw odds only, no price-shaped button */
+.bd-row-split { opacity: 0.72; }
+.bd-cell-split {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--g5); padding: 6px; border: 1px dashed var(--g2); border-radius: var(--radius-el);
+}
+
+.bd-more {
+  font-family: var(--font-body); font-size: 12px; color: var(--g6);
+  background: transparent; border: 0; padding: 6px 0; cursor: pointer; text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.bd-more:hover { color: var(--pitch); }
+
+/* ---- The order book, folded under a match ---- */
+.mkt-book { margin-top: 28px; border-top: 1px solid var(--g2); padding-top: 16px; }
+.mkt-book-toggle {
+  font-family: var(--font-body); font-size: 13px; color: var(--g7);
+  background: var(--g1); border: 1px solid var(--g2); border-radius: var(--radius-el);
+  padding: 8px 14px; cursor: pointer;
+}
+.mkt-book-toggle:hover { border-color: var(--g3); background: var(--g2); }
+.mkt-book-note { font-size: 12px; color: var(--g5); margin: 10px 0 4px; }
+
+@media (max-width: 640px) {
+  .bd-cell { padding: 7px 3px; }
+  .bd-cell-price { font-size: 15px; }
+}
+
+/* ---- Status page: the two halves of the system, read live ------------------ */
+.status-page { max-width: 760px; margin: 0 auto; }
+.status-head { margin-bottom: 20px; }
+.status-title { font-size: 26px; margin: 0; }
+.status-sub { color: var(--g6); font-size: 14px; margin: 4px 0 0; max-width: 60ch; }
+
+.status-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+.status-card { border: 1px solid var(--g2); border-radius: var(--radius-card); padding: 16px; background: var(--g0); }
+.status-card-big { font-family: var(--font-display); font-size: 34px; line-height: 1.1; margin-top: 6px; }
+.status-card-unit { font-size: 14px; color: var(--g5); font-family: var(--font-body); }
+.status-card-note { font-size: 12px; color: var(--g5); margin-top: 4px; }
+.status-bad-text { color: var(--away); }
+
+.status-section { margin-top: 26px; }
+.status-section-title { font-family: var(--font-display); font-size: 17px; margin: 0 0 2px; }
+.status-section-blurb { font-size: 13px; color: var(--g5); margin: 0 0 12px; max-width: 66ch; }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; display: inline-block; }
+.status-dot-ok { background: var(--pitch); box-shadow: 0 0 0 3px var(--pitch-tint); }
+.status-dot-bad { background: var(--away); box-shadow: 0 0 0 3px var(--away-tint); }
+.status-dot-idle { background: var(--g3); box-shadow: 0 0 0 3px var(--g1); }
+
+.status-group { margin-bottom: 14px; }
+.status-group-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.status-group-name { font-family: var(--font-display); font-size: 14px; color: var(--g8); }
+.status-group-blurb { font-size: 12px; color: var(--g5); }
+.status-ep { display: flex; align-items: center; gap: 10px; padding: 5px 0 5px 4px; border-bottom: 1px solid var(--g1); }
+.status-ep-name { flex: 1; font-size: 13px; }
+.status-ep-age { font-size: 11px; color: var(--g5); flex: 0 0 auto; }
+.status-ep-calls { font-size: 11px; color: var(--g4); flex: 0 0 72px; text-align: right; }
+
+.status-prog { padding: 10px 0; border-bottom: 1px solid var(--g1); }
+.status-prog-top { display: flex; align-items: center; gap: 10px; }
+.status-prog-name { flex: 1; font-size: 14px; font-family: var(--font-display); }
+.status-prog-addr { font-size: 12px; color: var(--g5); text-decoration: none; }
+.status-prog-addr:hover { color: var(--pitch); text-decoration: underline; }
+.status-prog-what { font-size: 12px; color: var(--g5); margin: 3px 0 0 18px; max-width: 64ch; }
+.status-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--g5); background: var(--g1); border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
+.status-foot { margin-top: 22px; }
+
+@media (max-width: 560px) { .status-cards { grid-template-columns: 1fr; } }
+
+/* The live-data pill doubles as the way into system status (a developer/judge surface), so it
+   reads as clickable without shouting. */
+.livefeed-btn { cursor: pointer; border: 1px solid transparent; font: inherit; }
+.livefeed-btn:hover { border-color: var(--g3); background: var(--g1); }
+
+/* ---- Lineups: the starting eleven and bench from the scores feed ---------- */
+.lu { margin-top: 24px; border-top: 1px solid var(--g2); padding-top: 18px; }
+.lu-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.lu-title { font-size: 18px; margin: 0; }
+.lu-src { font-size: 12px; color: var(--g5); }
+.lu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.lu-side { min-width: 0; }
+.lu-team { font-size: 15px; color: var(--g8); margin-bottom: 8px; }
+.lu-group { color: var(--g5); margin: 12px 0 6px; }
+.lu-player { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--g1); }
+.lu-num { flex: 0 0 22px; text-align: right; color: var(--g5); font-size: 12px; }
+.lu-name { font-size: 13px; color: var(--g8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 560px) { .lu-grid { grid-template-columns: 1fr; gap: 16px; } }
+
+/* ---- Traders: ranked on realised profit computed from public trades ---- */
+.traders { max-width: 860px; }
+.tr-head, .tr-row {
+  display: grid; grid-template-columns: minmax(0,1.6fr) 1fr 1fr 0.7fr 0.8fr;
+  gap: 10px; align-items: center;
+}
+.tr-head { color: var(--g5); padding-bottom: 6px; border-bottom: 1px solid var(--g2); }
+.tr-head > span + span, .tr-row > span + span { text-align: right; }
+.tr-row { padding: 9px 0; border-bottom: 1px solid var(--g1); font-size: 13px; }
+.tr-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-pnl { font-size: 14px; }
+.tr-up { color: var(--pitch); }
+.tr-down { color: var(--away); }
+.tr-cell { color: var(--g6); font-size: 12px; }
+@media (max-width: 620px) {
+  .tr-head, .tr-row { grid-template-columns: minmax(0,1.4fr) 1fr 1fr; }
+  .tr-head span:nth-child(n+4), .tr-row span:nth-child(n+4) { display: none; }
+}
+
+/* ---- Moving now: real price movement inside the five minute window ---- */
+.movers { margin-top: 26px; }
+.movers-title { font-size: 17px; margin: 0; }
+.movers-rail { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.mover { border: 1px solid var(--g2); border-radius: var(--radius-card); padding: 11px 13px; background: var(--g0); }
+.mover-kind { font-size: 12px; color: var(--g6); }
+.mover-outcome { font-size: 13px; color: var(--g8); margin-top: 1px; text-transform: capitalize; }
+.mover-move { display: flex; align-items: baseline; gap: 7px; margin-top: 7px; }
+.mover-from { font-size: 12px; color: var(--g5); }
+.mover-arrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+.mover-up { color: var(--pitch); }
+.mover-down { color: var(--away); }
+.mover-to { font-size: 19px; }
+.mover-meta { font-size: 11px; color: var(--g5); margin-top: 3px; }

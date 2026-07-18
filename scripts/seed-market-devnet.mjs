@@ -7,7 +7,7 @@ import { getOrCreateAssociatedTokenAccount, mintTo, TOKEN_PROGRAM_ID } from "@so
 
 const RPC = process.env.RPC ?? "https://api.devnet.solana.com";
 const connection = new Connection(RPC, "confirmed");
-const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("day1/devnet-wallet.json", "utf8"))));
+const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync("local/devnet-wallet.json", "utf8"))));
 const idl = JSON.parse(readFileSync("target/idl/fischio_market.json", "utf8"));
 const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(payer), { commitment: "confirmed" });
 anchor.setProvider(provider);
@@ -15,7 +15,7 @@ const program = new anchor.Program(idl, provider);
 const PID = program.programId;
 const BN = anchor.BN, U = 1_000_000;
 
-const { mint: usdcStr } = JSON.parse(readFileSync("day1/devnet-usdc.json", "utf8"));
+const { mint: usdcStr } = JSON.parse(readFileSync("local/devnet-usdc.json", "utf8"));
 const usdc = new PublicKey(usdcStr);
 // Seed a market on a genuinely upcoming fixture, so the market is real: it trades until the
 // match kicks off, the same as any prediction market. Run scripts/refresh-fixtures.mjs first
