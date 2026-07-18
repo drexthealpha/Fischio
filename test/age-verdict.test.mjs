@@ -44,12 +44,43 @@ test("a feed outage overrides freshness of an individual reading", () => {
   assert.match(v.reason, /feed itself/);
 });
 
-test("in play, a quiet line is pulled no matter how healthy the feed is", () => {
+test("in play, a line that has missed more than one repricing is pulled", () => {
   // The line has to track the match. A price from before the goal went in is exactly what gets
   // lifted, and the feed being alive elsewhere does not make that price safe.
-  const v = ageVerdict(10 * MIN, 30, true);
+  //
+  // 15 minutes is three of the feed's 300 second repricing intervals, so this line has missed at
+  // least two updates while the match moved on.
+  const v = ageVerdict(15 * MIN, 30, true);
   assert.equal(v.quote, false);
   assert.match(v.reason, /in-play/);
+});
+
+test("in play, the limit is set from what the feed actually does, not from a guess", () => {
+  // Measured live on fixture 18257865, France against England at the 71st minute: the feed reprices
+  // a live match every 300 seconds. Nine repricings observed, min 195s, median 300s, max 300s.
+  //
+  // The limit used to be 180 seconds. Against a 300 second cadence that is not strict, it is
+  // unsatisfiable: every line is stale by definition and the maker quotes nothing in play, ever.
+  // Both ages below were read off the live board while the bot sat refusing to quote anything.
+  for (const age of [247, 269]) {
+    const v = ageVerdict(age, 30, true);
+    assert.equal(v.quote, true, `${age}s is inside one repricing interval and must be quotable`);
+    assert.equal(v.widen, 1, `${age}s is normal, not a widening case`);
+  }
+});
+
+test("in play, a line between one and two repricings is quoted wider rather than refused", () => {
+  // Refusing outright makes the bot useless on this tier. Quoting tight on a price that has missed
+  // an update is how it gets picked off. So it quotes, and is paid for the risk.
+  const fresh = ageVerdict(299, 30, true);
+  const missed = ageVerdict(450, 30, true);
+  const nearly = ageVerdict(650, 30, true);
+
+  assert.equal(fresh.widen, 1);
+  assert.ok(missed.widen > fresh.widen, "a missed update must cost more spread");
+  assert.ok(nearly.widen > missed.widen, "and the cost keeps rising toward the cutoff");
+  assert.ok(nearly.widen <= 4, "but it is capped rather than growing without bound");
+  assert.match(missed.reason, /repricing cadence/);
 });
 
 test("in play, a line that is tracking the match is quoted normally", () => {
