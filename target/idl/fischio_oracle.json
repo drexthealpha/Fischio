@@ -1,0 +1,848 @@
+{
+  "address": "HUXM89x5Uxex2XfTh58i2xXzroeULgtuq7w3tT7zzYpJ",
+  "metadata": {
+    "name": "fischio_oracle",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Optimistic oracle: propose an outcome with a bond, dispute window, arbiter fallback. Resolves markets with no cryptographic proof source."
+  },
+  "instructions": [
+    {
+      "name": "arbitrate",
+      "docs": [
+        "Resolve a disputed assertion. Only the protocol arbiter from `OracleConfig`, never a",
+        "per-assertion choice. Updates the original proposer's accuracy record: correct if the",
+        "arbiter's outcome matches what they proposed, wrong otherwise."
+      ],
+      "discriminator": [
+        105,
+        91,
+        110,
+        150,
+        216,
+        11,
+        142,
+        142
+      ],
+      "accounts": [
+        {
+          "name": "arbiter",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "assertion",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  115,
+                  115,
+                  101,
+                  114,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "assertion.question_id",
+                "account": "Assertion"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposer_stats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "assertion.asserter",
+                "account": "Assertion"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "outcome",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "assert_outcome",
+      "docs": [
+        "Assert an outcome for a question and post a bond. Starts the dispute window."
+      ],
+      "discriminator": [
+        44,
+        170,
+        123,
+        232,
+        110,
+        150,
+        247,
+        36
+      ],
+      "accounts": [
+        {
+          "name": "asserter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "proposer_stats",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asserter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "assertion",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  115,
+                  115,
+                  101,
+                  114,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "question_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bond_mint"
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "assertion"
+              }
+            ]
+          }
+        },
+        {
+          "name": "asserter_token",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "question_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "proposed_outcome",
+          "type": "u8"
+        },
+        {
+          "name": "bond",
+          "type": "u64"
+        },
+        {
+          "name": "window_secs",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "claim",
+      "docs": [
+        "Claim the bond(s). Undisputed: the asserter reclaims their bond. Disputed: whoever",
+        "called it right (asserter if the resolved outcome matches their proposal, else the",
+        "disputer) takes both bonds."
+      ],
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "claimant",
+          "signer": true
+        },
+        {
+          "name": "assertion",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  115,
+                  115,
+                  101,
+                  114,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "assertion.question_id",
+                "account": "Assertion"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "assertion"
+              }
+            ]
+          }
+        },
+        {
+          "name": "claimant_token",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "dispute",
+      "docs": [
+        "Dispute an assertion within the window by posting an equal bond."
+      ],
+      "discriminator": [
+        216,
+        92,
+        128,
+        146,
+        202,
+        85,
+        135,
+        73
+      ],
+      "accounts": [
+        {
+          "name": "disputer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "assertion",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  115,
+                  115,
+                  101,
+                  114,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "assertion.question_id",
+                "account": "Assertion"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "assertion"
+              }
+            ]
+          }
+        },
+        {
+          "name": "disputer_token",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_config",
+      "docs": [
+        "Set the protocol-wide arbiter, once. Permissionless, but Anchor's `init` constraint",
+        "means only the first call can ever succeed; every call after that fails with an",
+        "already-initialized error, so this is a one-time setup step, not an ongoing authority."
+      ],
+      "discriminator": [
+        23,
+        235,
+        115,
+        232,
+        168,
+        96,
+        1,
+        231
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "arbiter"
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "arbiter",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "init_proposer_stats",
+      "docs": [
+        "Create a proposer's accuracy record. Permissionless, one per wallet, required before",
+        "that wallet can assert an outcome."
+      ],
+      "discriminator": [
+        128,
+        193,
+        76,
+        63,
+        52,
+        119,
+        246,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "proposer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "stats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "settle",
+      "docs": [
+        "After the window, if undisputed, the assertion stands. Permissionless. An unchallenged",
+        "stand counts as a correct proposal for the asserter's accuracy record, the same way an",
+        "undisputed UMA assertion is treated as accepted-true."
+      ],
+      "discriminator": [
+        175,
+        42,
+        185,
+        87,
+        144,
+        131,
+        102,
+        212
+      ],
+      "accounts": [
+        {
+          "name": "assertion",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  115,
+                  115,
+                  101,
+                  114,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "assertion.question_id",
+                "account": "Assertion"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposer_stats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "assertion.asserter",
+                "account": "Assertion"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Assertion",
+      "discriminator": [
+        146,
+        138,
+        144,
+        0,
+        47,
+        3,
+        13,
+        130
+      ]
+    },
+    {
+      "name": "OracleConfig",
+      "discriminator": [
+        133,
+        196,
+        152,
+        50,
+        27,
+        21,
+        145,
+        254
+      ]
+    },
+    {
+      "name": "ProposerStats",
+      "discriminator": [
+        171,
+        190,
+        133,
+        191,
+        11,
+        155,
+        53,
+        243
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ZeroBond",
+      "msg": "Bond must be greater than zero"
+    },
+    {
+      "code": 6001,
+      "name": "WindowTooShort",
+      "msg": "Dispute window is too short"
+    },
+    {
+      "code": 6002,
+      "name": "NotDisputable",
+      "msg": "Assertion is not open to dispute"
+    },
+    {
+      "code": 6003,
+      "name": "WindowClosed",
+      "msg": "Dispute window has closed"
+    },
+    {
+      "code": 6004,
+      "name": "NotSettleable",
+      "msg": "Assertion is not settleable"
+    },
+    {
+      "code": 6005,
+      "name": "WindowOpen",
+      "msg": "Dispute window is still open"
+    },
+    {
+      "code": 6006,
+      "name": "NotDisputed",
+      "msg": "Assertion is not disputed"
+    },
+    {
+      "code": 6007,
+      "name": "NotArbiter",
+      "msg": "Only the protocol arbiter can resolve a dispute"
+    },
+    {
+      "code": 6008,
+      "name": "NotResolved",
+      "msg": "Assertion is not resolved"
+    },
+    {
+      "code": 6009,
+      "name": "AlreadyClaimed",
+      "msg": "Bonds already claimed"
+    },
+    {
+      "code": 6010,
+      "name": "NotWinner",
+      "msg": "Only the winner can claim"
+    },
+    {
+      "code": 6011,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "Assertion",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "question_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "asserter",
+            "type": "pubkey"
+          },
+          {
+            "name": "disputer",
+            "type": "pubkey"
+          },
+          {
+            "name": "bond_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "bond",
+            "type": "u64"
+          },
+          {
+            "name": "proposed_outcome",
+            "type": "u8"
+          },
+          {
+            "name": "resolved_outcome",
+            "type": "u8"
+          },
+          {
+            "name": "propose_ts",
+            "type": "i64"
+          },
+          {
+            "name": "window_secs",
+            "type": "i64"
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "AssertionState"
+              }
+            }
+          },
+          {
+            "name": "claimed",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AssertionState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Proposed"
+          },
+          {
+            "name": "Disputed"
+          },
+          {
+            "name": "Resolved"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleConfig",
+      "docs": [
+        "Protocol-wide arbiter. Set once via `init_config`; nothing in this program can ever",
+        "change it afterward, so there is no ongoing admin authority, only a one-time setup value."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "arbiter",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposerStats",
+      "docs": [
+        "A proposer's permissionless, on-chain accuracy record: how many of their assertions stood",
+        "or were upheld versus how many they made in total. Curation infrastructure, not a gate by",
+        "itself yet; that threshold is a policy decision for a later instruction, not invented here."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "correct",
+            "type": "u32"
+          },
+          {
+            "name": "total",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

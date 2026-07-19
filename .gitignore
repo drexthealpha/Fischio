@@ -1,5 +1,21 @@
 node_modules/
-target/
+
+# Rust build output, except the IDLs.
+#
+# The bots and the CLI read target/idl/*.json to talk to the deployed programs. Those files are not
+# build waste, they are the public interface of the programs: anyone can fetch the same thing from
+# the chain, and the app already ships its own copies under app/src. Ignoring them meant a fresh
+# clone could not run a single bot without a full Rust toolchain and an anchor build, which is how
+# the deployed box ended up crash-looping on ENOENT for fischio_market.json.
+#
+# The four-line shape is deliberate. Ignoring `target/` outright excludes the directory itself, and
+# git will not look inside an excluded directory, so a later negation can never match. Excluding the
+# contents instead leaves the directory visible for the negations below to work against.
+target/*
+!target/idl/
+target/idl/*
+!target/idl/*.json
+
 .anchor/
 test-ledger*/
 dist/
