@@ -6,8 +6,7 @@
 // limit is that "who scored" is not provable data, but "who started" is real and worth showing.
 import { useEffect, useState } from "react";
 
-const INGEST = new URLSearchParams(window.location.search).get("ingest")
-  ?? import.meta.env.VITE_INGEST ?? "http://127.0.0.1:8795";
+import { INGEST } from "./origins.js";
 
 function Side({ side }) {
   const starters = side.players.filter((p) => p.starter);

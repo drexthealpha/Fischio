@@ -8,9 +8,7 @@
 // later changes only this file.
 import { connection } from "./chain.js";
 
-const params = new URLSearchParams(window.location.search);
-const RELAYER = params.get("relayer") ?? "http://127.0.0.1:8791";
-const SPONSOR = params.get("sponsor") ?? "http://127.0.0.1:8793";
+import { RELAYER, SPONSOR } from "./origins.js";
 
 let feePayerCache = null;
 async function feePayer() {

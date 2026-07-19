@@ -18,8 +18,7 @@ const FLAG = "fischio.embedded.on";
 const SID = "fischio.sid";
 const tokenKey = (pk) => `fischio.session.${pk}`;
 
-const params = new URLSearchParams(window.location.search);
-const API = params.get("api") ?? "http://127.0.0.1:8790";
+import { API } from "./origins.js";
 
 // A fetch that gives up after a few seconds, so a missing or slow session backend can never
 // leave the header stuck on "signing in". Trading is on-chain and does not need this session.

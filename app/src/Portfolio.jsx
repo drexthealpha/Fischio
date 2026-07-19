@@ -11,8 +11,7 @@ import { usd, lamportsToSol, shortKey } from "./data.js";
 import Flag from "./Flag.jsx";
 import SolLink from "./SolLink.jsx";
 
-const params = new URLSearchParams(window.location.search);
-const INDEXER = params.get("indexer") ?? "http://127.0.0.1:8792";
+import { INDEXER } from "./origins.js";
 
 export default function Portfolio() {
   const wallet = useActiveWallet();

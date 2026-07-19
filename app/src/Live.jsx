@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import Ticket from "./Ticket.jsx";
 import { lamportsToSol } from "./data.js";
 
-const RELAY = "http://127.0.0.1:8787";
+// The live relay is a local development tool and is not part of a deployment. Point it with
+// ?relay= when running one locally; otherwise this view falls back to the ingest feed.
+const RELAY = new URLSearchParams(window.location.search).get("relay") ?? null;
 
 // classify a real bot log line for feed styling; unknown lines pass through as-is
 function classify(text) {

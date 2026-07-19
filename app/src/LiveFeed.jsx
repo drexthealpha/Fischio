@@ -5,7 +5,7 @@
 // and judge detail (all 18 endpoints, the deployed programs) lives, off the main nav.
 import { useEffect, useState } from "react";
 
-const INGEST = new URLSearchParams(window.location.search).get("ingest") ?? import.meta.env.VITE_INGEST ?? "http://127.0.0.1:8795";
+import { INGEST } from "./origins.js";
 
 export default function LiveFeed({ onOpen }) {
   const [age, setAge] = useState(null);

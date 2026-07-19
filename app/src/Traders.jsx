@@ -12,8 +12,7 @@ import { useEffect, useState } from "react";
 import { usd, shortKey } from "./data.js";
 import SolLink from "./SolLink.jsx";
 
-const INDEXER = new URLSearchParams(window.location.search).get("indexer")
-  ?? import.meta.env.VITE_INDEXER ?? "http://127.0.0.1:8792";
+import { INDEXER } from "./origins.js";
 
 export default function Traders() {
   const [rows, setRows] = useState(undefined); // undefined = loading, null = unreachable

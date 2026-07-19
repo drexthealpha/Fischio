@@ -4,7 +4,7 @@
 // have. This is the trust primitive made visible: the match itself is a signed TxLINE record.
 import { useEffect, useState } from "react";
 
-const INGEST = new URLSearchParams(window.location.search).get("ingest") ?? import.meta.env.VITE_INGEST ?? "http://127.0.0.1:8795";
+import { INGEST } from "./origins.js";
 
 export default function VerifiedBadge({ fixtureId }) {
   const [ok, setOk] = useState(false);

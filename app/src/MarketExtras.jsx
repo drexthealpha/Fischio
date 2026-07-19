@@ -6,9 +6,7 @@ import { useEffect, useState } from "react";
 import { shortKey, usd, nameOf } from "./data.js";
 import { fromUsdc } from "./market.js";
 
-const params = new URLSearchParams(window.location.search);
-const API = params.get("api") ?? "http://127.0.0.1:8790";
-const INDEXER = params.get("indexer") ?? "http://127.0.0.1:8792";
+import { API, INDEXER } from "./origins.js";
 
 // A clean probability-over-time line, the way Polymarket draws it: no candlesticks, just the
 // odds moving. Always plots the current live price so a brand-new market still shows a line.

@@ -4,8 +4,7 @@
 import { useEffect, useState } from "react";
 import { FIXTURES_BY_ID } from "./chain.js";
 
-const params = new URLSearchParams(window.location.search);
-const API = params.get("api") ?? "http://127.0.0.1:8790";
+import { API } from "./origins.js";
 const pct = (p) => `${Math.round(p * 100)}%`;
 
 export default function Trending() {

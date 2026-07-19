@@ -9,8 +9,7 @@
 // compare and a movement figure for them would be invented.
 import { useEffect, useState } from "react";
 
-const INGEST = new URLSearchParams(window.location.search).get("ingest")
-  ?? import.meta.env.VITE_INGEST ?? "http://127.0.0.1:8795";
+import { INGEST } from "./origins.js";
 
 const KIND = {
   "1X2_PARTICIPANT_RESULT": "Match result",

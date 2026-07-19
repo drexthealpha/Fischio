@@ -9,8 +9,7 @@ import { useEffect, useState } from "react";
 import { Connection } from "@solana/web3.js";
 import { RPC } from "./chain.js";
 
-const INGEST = new URLSearchParams(window.location.search).get("ingest")
-  ?? import.meta.env.VITE_INGEST ?? "http://127.0.0.1:8795";
+import { INGEST } from "./origins.js";
 
 // The eighteen endpoints, in the four groups the OpenAPI spec puts them in, so the page reads
 // like the feed's own shape rather than an arbitrary list.

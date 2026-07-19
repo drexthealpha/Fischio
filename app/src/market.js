@@ -42,9 +42,7 @@ const USDC = 1_000_000; // 6 decimals
 export const toUsdc = (x) => Math.round(x * USDC);
 export const fromUsdc = (x) => x / USDC;
 
-const params = new URLSearchParams(window.location.search);
-const API = params.get("api") ?? import.meta.env.VITE_API ?? "http://127.0.0.1:8790";
-const INGEST = params.get("ingest") ?? import.meta.env.VITE_INGEST ?? "http://127.0.0.1:8795";
+import { API, INGEST } from "./origins.js";
 
 // Which leg of a 1X2 match result a market is, and how a market's terms map back to the feed.
 //

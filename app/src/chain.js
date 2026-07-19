@@ -8,7 +8,8 @@ import fixturesFile from "./fixtures.json";
 const params = new URLSearchParams(window.location.search);
 // RPC precedence: ?rpc= override, then VITE_RPC from .env.local (a paid endpoint like Alchemy,
 // kept out of the committed source), then the throttled public devnet as a last resort.
-export const RPC = params.get("rpc") ?? import.meta.env.VITE_RPC ?? "https://api.devnet.solana.com";
+export { RPC } from "./origins.js";
+import { RPC } from "./origins.js";
 export const connection = new Connection(RPC, "confirmed");
 
 // Names for fixtures we have already seen, so a ticket rendered from chain state can show
