@@ -25,11 +25,37 @@ const root = join(here, "..");
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d; };
 const has = (k) => process.argv.includes(`--${k}`);
 
+/**
+ * A number from the command line, then the environment, then the default.
+ *
+ * The empty string is treated as absent, which `??` does not do. A hosted panel hands the process
+ * an empty value for a variable that exists but was never filled in, and `Number("")` is 0, so
+ * `interval` would have become 0 and setInterval(sweep, 0) is a tight loop against the RPC. That is
+ * far worse than the 15 second sweep this was meant to slow down. Anything that does not parse to a
+ * positive finite number falls back to the default rather than being trusted.
+ */
+const num = (flag, envName, fallback) => {
+  for (const raw of [arg(flag, undefined), process.env[envName]]) {
+    if (raw === undefined || raw === null || String(raw).trim() === "") continue;
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return n;
+    console.warn(`[keeper] ignoring ${flag}=${JSON.stringify(raw)}, not a positive number; using ${fallback}`);
+  }
+  return fallback;
+};
+
+// Every knob reads the environment as well as the command line, because a hosted panel has no
+// command line. The supervisor spawns this with no arguments, so a flag-only setting cannot be
+// changed on a deployed box at all.
 const RPC = arg("rpc", process.env.RPC ?? "https://api.devnet.solana.com");
 const INGEST = arg("ingest", process.env.INGEST ?? "http://127.0.0.1:8795");
-const DRIFT = Number(arg("drift", 0.02));        // realign only when price is this far off the line
-const INTERVAL = Number(arg("interval", 15000)); // how often to sweep every market
-const MAX = Number(arg("max", 400));             // cap collateral per correction, in fUSDC
+const DRIFT = num("drift", "KEEPER_DRIFT", 0.02); // realign only when price is this far off the line
+// A sweep reads every market with getProgramAccounts, which is the most rate-limited call an RPC
+// serves. At 15 seconds this alone was four of those a minute, on top of the API's twenty, and
+// Helius answered with a continuous stream of 429s. The line being tracked is delayed by about a
+// minute anyway, so sweeping four times a minute cannot see anything one sweep would miss.
+const INTERVAL = num("interval", "KEEPER_INTERVAL", 60000);
+const MAX = num("max", "KEEPER_MAX", 400); // cap collateral per correction, in fUSDC
 const ONCE = has("once");
 const DRY = has("dry");
 const U = 1_000_000;
