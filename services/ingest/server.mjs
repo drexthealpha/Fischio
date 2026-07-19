@@ -21,6 +21,7 @@
 import "../../lib/env.mjs"; // load the gitignored root .env (RPC etc.) before anything reads it
 import express from "express";
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { txlineClient, impliedResult, parseMarkets, groupOddsMarkets } from "../../lib/txline.mjs";
 import { loadResultScore, lineupsOf } from "../../lib/scores.mjs";
 import { computeMovers } from "../../lib/movers.mjs";
@@ -237,6 +238,10 @@ async function runStream(name, open, apply) {
   }
 }
 
+// True only when this file was started directly. Imported by a serverless handler, everything that
+// binds a port, forwards to a sibling port, or loops forever has to stay switched off.
+const isMain = process.argv[1] != null && import.meta.url === pathToFileURL(process.argv[1]).href;
+
 const app = express();
 app.use((_, res, nx) => { res.set("Access-Control-Allow-Origin", "*"); nx(); });
 
@@ -249,7 +254,10 @@ app.use((_, res, nx) => { res.set("Access-Control-Allow-Origin", "*"); nx(); });
 // Each service keeps its own prefix rather than mounting at the root, because this service and the
 // api both answer /markets and mean different things by it. Registered before the routes below, so a
 // prefixed request never reaches them and anything unprefixed falls straight through untouched.
-app.use(gateway());
+// Only on a box. Serverless has no sibling ports to forward to, and mounting this there would turn
+// every /api request into a connection attempt against 127.0.0.1:8790 inside a function container,
+// which fails as a 502 that looks like the api being down rather than the gateway being misplaced.
+if (isMain) app.use(gateway());
 app.get("/health", (_, res) => { const done = [...used.values()].filter((u) => u.calls > 0).length; res.json({ ok: true, tracked: [...tracked], fixtures: live.size, endpointsExercised: `${done}/18`, pollMs: POLL_MS }); });
 // marketBook is the internal Map the catalogue is keyed on; it does not survive JSON, and
 // s.markets already carries the same data as an array. Strip it rather than emit "{}".
@@ -333,23 +341,70 @@ app.get("/verify/stat", async (req, res) => { const r = await hit("statValidatio
 app.get("/pricing", async (req, res) => { const r = await hit("purchaseQuote", () => tx.purchaseQuote(req.query)); r ? res.json(r) : res.status(502).json({ error: used.get("purchaseQuote").note }); });
 app.post("/activate", express.json(), async (req, res) => { const r = await hit("activate", () => tx.activate(req.body)); r ? res.json(r) : res.status(502).json({ error: used.get("activate").note }); });
 
-app.listen(PORT, async () => {
-  log(`fischio ingestion on http://127.0.0.1:${PORT}`);
-  await bootstrap();
-  await refreshFixtures();
-  await pollFixtures();
-  await pollWindows();
-  await pollHistory();
-  setInterval(refreshFixtures, FIXTURES_MS);
-  setInterval(pollFixtures, POLL_MS);
-  setInterval(pollWindows, WINDOW_MS);
-  setInterval(pollHistory, 10 * 60 * 1000);
-  runStream("oddsStream", (opts) => tx.oddsStream(opts), (m) => {
-    const id = m.FixtureId ?? m.fixtureId; if (!id) return;
-    upsertMarkets(touch(id), [m]);
+// ---- two ways to serve this: a long-running process, or a serverless function ----
+//
+// On a box the pollers run on intervals and two SSE streams stay open, so a request is always
+// answered from state that a background loop has already filled.
+//
+// A function has no background loop and no state that survives between invocations, so the first
+// request after a cold start would answer from empty maps. `ensureFresh` moves the same work to
+// where the host will actually run it: the request fills only what its own route needs, and a warm
+// instance skips the work entirely.
+//
+// The streams have no serverless equivalent and are not emulated. They exist to catch every event
+// between polls, which matters for a service whose output settles money, and a function that lives
+// for the length of one request cannot hold a resumable stream. On Vercel the data is therefore
+// poll-fresh rather than push-fresh, which is the honest tradeoff and is why the box remains the
+// deployment that agents read from.
+
+let bootstrapped = null; // a promise, so concurrent requests share one guest-start rather than racing
+const freshAt = { fixtures: 0, windows: 0 };
+
+/**
+ * Fill whatever this route reads, if it is missing or older than maxAgeMs.
+ *
+ * `kind` is the data a route depends on, not the route name: /live and /markets/:id both need the
+ * fixture poll, /movers and /goals both need the window poll, and /verify, /pricing and /endpoints
+ * need neither because they call TxLINE on demand or report local counters.
+ */
+export async function ensureFresh(kind, maxAgeMs = 30_000) {
+  bootstrapped ??= bootstrap(); // guest token first: every TxLINE call below needs it
+  await bootstrapped;
+
+  const stale = (key) => Date.now() - freshAt[key] > maxAgeMs;
+
+  if ((kind === "fixtures" || kind === "all") && stale("fixtures")) {
+    await refreshFixtures();
+    await pollFixtures();
+    freshAt.fixtures = Date.now();
+  }
+  if ((kind === "windows" || kind === "all") && stale("windows")) {
+    await pollWindows();
+    freshAt.windows = Date.now();
+  }
+}
+
+export { app };
+
+if (isMain) {
+  app.listen(PORT, async () => {
+    log(`fischio ingestion on http://127.0.0.1:${PORT}`);
+    await bootstrap();
+    await refreshFixtures();
+    await pollFixtures();
+    await pollWindows();
+    await pollHistory();
+    setInterval(refreshFixtures, FIXTURES_MS);
+    setInterval(pollFixtures, POLL_MS);
+    setInterval(pollWindows, WINDOW_MS);
+    setInterval(pollHistory, 10 * 60 * 1000);
+    runStream("oddsStream", (opts) => tx.oddsStream(opts), (m) => {
+      const id = m.FixtureId ?? m.fixtureId; if (!id) return;
+      upsertMarkets(touch(id), [m]);
+    });
+    runStream("scoresStream", (opts) => tx.scoresStream(opts), (m) => {
+      const id = m.FixtureId ?? m.fixtureId; if (!id) return;
+      const s = touch(id); s.scores = m; s.scoresAt = Date.now();
+    });
   });
-  runStream("scoresStream", (opts) => tx.scoresStream(opts), (m) => {
-    const id = m.FixtureId ?? m.fixtureId; if (!id) return;
-    const s = touch(id); s.scores = m; s.scoresAt = Date.now();
-  });
-});
+}

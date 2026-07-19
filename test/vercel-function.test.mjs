@@ -72,6 +72,42 @@ test("a path outside the mount is refused as json, not passed to express", { ski
   assert.equal(JSON.parse(body).error, "not found");
 });
 
+// The ingest function fills only the state its route reads. Getting this wrong is not visible in a
+// response, it just makes every /movers cold start pay for a fixture poll it never looks at, so the
+// mapping is pinned here rather than left to be noticed in a latency graph.
+test("each ingest route declares only the data it reads", async () => {
+  const { freshnessKindOf } = await import("../api/ingest/[...path].mjs");
+
+  for (const p of ["/live", "/live/18257739", "/markets/18257739", "/score/18257739", "/lineups/18257739"]) {
+    assert.equal(freshnessKindOf(p), "fixtures", `${p} reads the fixture poll`);
+  }
+  for (const p of ["/movers", "/goals"]) {
+    assert.equal(freshnessKindOf(p), "windows", `${p} reads the window poll`);
+  }
+  // These call TxLINE on demand or report local counters, so they must not trigger a poll.
+  for (const p of ["/health", "/endpoints", "/verify/odds", "/verify/fixture/1", "/pricing"]) {
+    assert.equal(freshnessKindOf(p), null, `${p} needs no cached state`);
+  }
+  // Query strings must not change the answer.
+  assert.equal(freshnessKindOf("/movers?limit=5&minMove=2"), "windows");
+});
+
+test("the ingest function serves the live window off TxLINE", { skip: !(process.env.TXLINE_JWT && process.env.TXLINE_API_TOKEN) && "set TXLINE_JWT and TXLINE_API_TOKEN" }, async () => {
+  const { default: handler } = await import("../api/ingest/[...path].mjs");
+
+  const movers = await callHandler(handler, "/api/ingest/movers");
+  assert.equal(movers.status, 200);
+  const json = JSON.parse(movers.body);
+  assert.ok(Array.isArray(json.movers), "movers must be an array");
+  assert.match(movers.headers.get("cache-control") ?? "", /s-maxage=\d+/);
+
+  // /endpoints proves the 18-endpoint claim is checkable rather than asserted, so it has to answer
+  // here too, and without paying for a poll.
+  const endpoints = await callHandler(handler, "/api/ingest/endpoints");
+  assert.equal(endpoints.status, 200);
+  assert.equal(JSON.parse(endpoints.body).total, 18);
+});
+
 test("the api function serves the real board off devnet", { skip: !process.env.RPC && "set RPC to reach devnet" }, async () => {
   const { default: handler } = await import("../api/[...path].mjs");
 

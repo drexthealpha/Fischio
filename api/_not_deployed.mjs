@@ -17,7 +17,7 @@ const DETAIL = {
   indexer: "Leaderboard, trade history and pnl are served by the indexer, which runs alongside the agents rather than on this deployment. The same data is derivable from chain state through /api.",
   relayer: "The relayer signs and submits transactions on a user's behalf. It holds a key, so it runs where that key is held, not on a public function.",
   sponsor: "The sponsor funds new accounts. It holds a key, so it runs where that key is held, not on a public function.",
-  ingest: "The live TxLINE feed layer runs alongside the agents. Market and book state on this deployment is read from Solana and does not depend on it.",
+  supervisor: "The supervisor restarts crashed processes and reports their health. There are no long-running processes on this deployment to supervise, so there is nothing for it to report.",
 };
 
 /** The service name from `?service=`, without needing the runtime to have parsed a query object. */

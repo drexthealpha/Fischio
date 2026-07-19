@@ -12,7 +12,18 @@
     { "source": "/indexer/:path*", "destination": "/api/_not_deployed?service=indexer" },
     { "source": "/relayer/:path*", "destination": "/api/_not_deployed?service=relayer" },
     { "source": "/sponsor/:path*", "destination": "/api/_not_deployed?service=sponsor" },
-    { "source": "/supervisor/:path*", "destination": "/api/_not_deployed?service=ingest" },
+    { "source": "/supervisor/:path*", "destination": "/api/_not_deployed?service=supervisor" },
+
+    { "source": "/live", "destination": "/api/ingest/live" },
+    { "source": "/live/:path*", "destination": "/api/ingest/live/:path*" },
+    { "source": "/movers", "destination": "/api/ingest/movers" },
+    { "source": "/goals", "destination": "/api/ingest/goals" },
+    { "source": "/endpoints", "destination": "/api/ingest/endpoints" },
+    { "source": "/pricing", "destination": "/api/ingest/pricing" },
+    { "source": "/verify/:path*", "destination": "/api/ingest/verify/:path*" },
+    { "source": "/score/:path*", "destination": "/api/ingest/score/:path*" },
+    { "source": "/lineups/:path*", "destination": "/api/ingest/lineups/:path*" },
+    { "source": "/markets/:path*", "destination": "/api/ingest/markets/:path*" },
 
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
