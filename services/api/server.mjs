@@ -50,6 +50,42 @@ const tokenBal = async (pk) => {
   try { return Number((await connection.getTokenAccountBalance(pk)).value.amount); } catch { return 0; }
 };
 
+/**
+ * Balances for many token accounts, in as few requests as the RPC allows.
+ *
+ * One request per account, awaited in sequence inside a loop over every market, is what this
+ * replaces. At 34 markets that was 68 round trips per tick. Helius answered with a continuous
+ * stream of 429s, and because every retry is more work, the container was eventually stopped for
+ * sustained CPU. The load was almost entirely failed requests.
+ *
+ * getMultipleAccountsInfo takes up to 100 addresses at a time, so those 68 reads become one. The
+ * amount sits at offset 64 of an SPL token account as a little-endian u64. That is the account
+ * layout itself, not a parsing shortcut: it is the same field getTokenAccountBalance reads server
+ * side, which is why the numbers match exactly.
+ *
+ * A missing account reads as zero, which is the right answer. A pool with no account holds nothing.
+ */
+async function tokenBalances(pubkeys, tries = 6) {
+  const out = new Map();
+  for (let start = 0; start < pubkeys.length; start += 100) {
+    const chunk = pubkeys.slice(start, start + 100);
+    let infos = null;
+    for (let i = 0; i < tries; i++) {
+      try { infos = await connection.getMultipleAccountsInfo(chunk); break; }
+      catch (e) {
+        if (!String(e).includes("429")) throw e;
+        await sleep(700 * (i + 1));
+      }
+    }
+    if (!infos) throw new Error("rate limited by RPC after retries");
+    chunk.forEach((pk, i) => {
+      const data = infos[i]?.data;
+      out.set(pk.toBase58(), data && data.length >= 72 ? Number(data.readBigUInt64LE(64)) : 0);
+    });
+  }
+  return out;
+}
+
 // getProgramAccounts is the most throttled call on public devnet; retry with backoff so a
 // free RPC survives. Set RPC to a paid endpoint (Helius, Triton) to remove the limit.
 async function accountsOf(program, name, tries = 6) {
@@ -67,11 +103,19 @@ async function accountsOf(program, name, tries = 6) {
 
 async function readAmmMarkets() {
   const all = await accountsOf(marketProg, "market");
+
+  // Every pool address first, then one batched read, rather than two awaits per market inside the
+  // loop. Same numbers, one request instead of two per market.
+  const pools = all.map(({ publicKey }) => ({
+    yes: seedPk(marketProg.programId, "yes_pool", publicKey.toBuffer()),
+    no: seedPk(marketProg.programId, "no_pool", publicKey.toBuffer()),
+  }));
+  const balances = await tokenBalances(pools.flatMap((p) => [p.yes, p.no]));
+
   const out = [];
-  for (const { publicKey, account } of all) {
-    const yesPool = seedPk(marketProg.programId, "yes_pool", publicKey.toBuffer());
-    const noPool = seedPk(marketProg.programId, "no_pool", publicKey.toBuffer());
-    const [y, n] = [await tokenBal(yesPool), await tokenBal(noPool)];
+  for (const [idx, { publicKey, account }] of all.entries()) {
+    const y = balances.get(pools[idx].yes.toBase58()) ?? 0;
+    const n = balances.get(pools[idx].no.toBase58()) ?? 0;
     const total = y + n;
     out.push({
       kind: "amm", address: publicKey.toBase58(), fixtureId: account.terms.fixtureId.toNumber(),
