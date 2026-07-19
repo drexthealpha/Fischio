@@ -82,7 +82,7 @@ The fastest test loop needs no validator and no chain:
 - Real data only. No mock markets, no placeholder scores, no lorem ipsum. Every number the UI
   shows should come from chain or from the TxLINE feed.
 - Money code gets adversarial tests before it is trusted. Write a test that a naive version
-  of the code would fail, so the suite proves the behavior and not just the happy case.
+  of the code would fail, so the suite proves the behaviour rather than only the happy case.
 - Keep the invariant. Each program holds one clear money invariant (see `SECURITY.md`);
   a change that could break it needs a test that proves it does not.
 - Plain language in copy, comments, and commits. Write for a bettor. Assume the reader does

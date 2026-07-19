@@ -2,6 +2,17 @@
 
 *Il fischio finale* means the final whistle. That is when a match ends, and on fischio it is when the money moves.
 
+**Live now**
+
+| | |
+|---|---|
+| App | https://fischio-seven.vercel.app |
+| API | http://78.154.103.18:14777 |
+
+No wallet is needed to look. `/health` shows the feed, `/api/markets` returns every on-chain market with its price and reserves, and `/supervisor/health` returns 503 rather than 200 when a service is down.
+
+Devnet, test tokens, nothing audited. Do not put real money in it.
+
 ## The problem
 
 You bet that Spain v Argentina will have more than nine corners. The match ends with eleven.
@@ -215,9 +226,9 @@ We would rather you read this than find it out yourself.
 - **Fiat on and off ramps need a licensed partner.** That is an integration, and there is no program to write for it.
 - **Player markets are not listed, and this one is not a matter of time.** The record that goes into the fingerprint holds three numbers, a stat key, a value and a period, and a player id is not one of them. So a player market could only ever settle on our say-so, which is the exact thing this product exists to remove. There is a second reason on top of that one: on the free World Cup tier the per-event player fields are not populated anyway. We checked a full finished match and none of its 964 score records carried a scorer or card id. The team lineups do come through, with names, shirt numbers and positions, so a lineup view is real, but "who scored" as provable data is not there. We would rather list fewer markets than list one we have to be trusted on.
 - **Quarter lines carry no fair price.** On an Asian handicap ending in .25 or .75 your stake splits across two lines, and TxODDS publishes no single demargined percentage for them. Around a third of the board is quarter lines. We show the odds and say the fair price is unpublished rather than inventing one.
-- **Only half-goal lines get a pool you can trade.** The board shows every line TxODDS quotes, but a pool opens only on the half-goal ones, over 1.5 or over 2.5, where there is a clean winner. A whole-goal line like over 2.0 refunds on exactly two goals, and a yes or no market has no way to hand your stake back, so those stay on the board as prices for reference and are not tradeable. This is why some cells you see are live and others are marked as coming from the feed only.
+- **Nine of the 29 lines on a fixture get a pool, and they become 11 markets.** A market here is binary, so a line qualifies only if it has a genuinely two-way outcome: the three result legs, and the half lines on totals and handicaps, for both the full match and the first half. A three-way result is one row on the feed and three separate markets on chain, which is where 9 becomes 11. Handicap -0.5 is the same proposition as the home leg, so it collapses into it rather than opening a second pool for one bet. A whole-goal line like over 2.0 refunds on exactly two goals and a yes or no market cannot hand a stake back, and a quarter line splits the stake across two outcomes. Both stay on the board as reference prices with the reason attached. `lib/settleable.mjs` is the single place that decides, and `bot/verify-coverage.mjs` reconciles settleable count against market count against book count and names any gap rather than rounding it off.
 - **The settlement works for any sport, but we can only show it on football.** The proof checks a stat key, a value and a period, and that is the same shape whether the number is goals, points or touchdowns, so the programs would settle a basketball or an NFL market with no new code. We cannot demonstrate that here, because the free tier only carries the World Cup and a few friendlies. We would rather say this plainly than seed a market on data we cannot pull.
-- **Markets settle one at a time.** The oracle proves at most two stats in a single call, so each market is resolved in its own transaction. TxODDS publishes a batched multi-stat package that would let a whole board settle in one call, and the client already reads it, but the deployed oracle exposes no instruction to check it, so we do not claim that path works. Proving the schedule is different and does batch: `fischio verify schedule` checks every fixture in an hour in one proof, because the fixtures side does expose a batch instruction.
+- **Batched settlement works, and it took a correction from TxODDS to get there.** An earlier version of this file said the deployed oracle exposed no instruction for the multi-stat package. That was wrong. `validate_stat_v3` is on the same devnet program as V1 and V2, sharing the same `daily_scores_roots` account, and it is landed and verified: two leaves, no per-leaf proofs, four shared hashes, settled in two transactions. The detail that makes it work is that both the epoch day and `payload.ts` have to come from `summary.updateStats.minTimestamp` rather than from the response's own `ts`. Proving the schedule batches too: `fischio verify schedule` checks every fixture in an hour in one proof.
 
 ## Contributing and license
 
