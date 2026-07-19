@@ -18,7 +18,7 @@
 import "../../lib/env.mjs"; // load the gitignored root .env (RPC etc.) before anything reads it
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import express from "express";
 import { WebSocketServer } from "ws";
@@ -340,34 +340,68 @@ app.get("/markets/:address/prices", fromCache((req) => {
   return { address: addr, series };
 }));
 
-// ---- WebSocket: broadcast each new snapshot (Polymarket-style real-time layer) ----
+// ---- Two ways to serve this: a long-running process, or a serverless function ----
+//
+// On a box, the process below polls on an interval and pushes each new snapshot over the socket.
+// Reads never scale with traffic because every REST request is answered from the same cache.
+//
+// On a serverless host there is no interval to run and no socket to hold, and module state does not
+// survive between invocations, so a route reading `cache` directly would answer the first request
+// after every cold start with an empty board. `ensureCache` closes that: the request fills the
+// snapshot itself when there is nothing fresh to serve, which is the same work the tick was doing,
+// moved to where the host will actually run it.
+//
+// The import must therefore be free of side effects. Binding a port and opening a WebSocket server
+// at import time is what makes a module unusable in a function, so both stay behind the check for
+// being run directly.
 
-const server = createServer(app);
-const wss = new WebSocketServer({ server, path: "/ws" });
-let lastMsg = null;
-async function tick() {
-  try {
-    cache = await fullSnapshot();
-    cacheError = null;
-    recordHistory(cache);
-    const msg = JSON.stringify({ channel: "snapshot", data: {
-      markets: cache.markets, books: cache.books.map(bookSummary), ts: cache.ts,
-    } });
-    if (msg !== lastMsg) {
-      lastMsg = msg;
-      for (const c of wss.clients) if (c.readyState === 1) c.send(msg);
-    }
-  } catch (e) {
-    cacheError = String(e.message ?? e);
-    console.error("tick error:", cacheError);
-  }
+/**
+ * The snapshot cache, filled on demand.
+ *
+ * `maxAgeMs` is deliberately larger than a single chain read takes. A warm function instance serves
+ * from memory, and only a cold start or a stale cache pays for the four getProgramAccounts calls.
+ */
+export async function ensureCache(maxAgeMs = 30_000) {
+  if (cache && Date.now() - cache.ts <= maxAgeMs) return cache;
+  cache = await fullSnapshot();
+  cacheError = null;
+  recordHistory(cache);
+  return cache;
 }
-wss.on("connection", (ws) => { if (lastMsg) ws.send(lastMsg); });
-setInterval(tick, POLL_MS);
 
-server.listen(PORT, () => {
-  console.log(`fischio API on http://127.0.0.1:${PORT}  (rpc ${RPC})`);
-  console.log(`  REST: /health /markets /markets/:a /books /books/:a /settlements /trending`);
-  console.log(`  WS:   ws://127.0.0.1:${PORT}/ws  (snapshot channel, ${POLL_MS}ms)`);
-  tick();
-});
+export { app };
+
+// True only when this file was started directly, not when it was imported by a function handler.
+const isMain = process.argv[1] != null && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMain) {
+  const server = createServer(app);
+  const wss = new WebSocketServer({ server, path: "/ws" });
+  let lastMsg = null;
+  const tick = async () => {
+    try {
+      cache = await fullSnapshot();
+      cacheError = null;
+      recordHistory(cache);
+      const msg = JSON.stringify({ channel: "snapshot", data: {
+        markets: cache.markets, books: cache.books.map(bookSummary), ts: cache.ts,
+      } });
+      if (msg !== lastMsg) {
+        lastMsg = msg;
+        for (const c of wss.clients) if (c.readyState === 1) c.send(msg);
+      }
+    } catch (e) {
+      cacheError = String(e.message ?? e);
+      console.error("tick error:", cacheError);
+    }
+  };
+  wss.on("connection", (ws) => { if (lastMsg) ws.send(lastMsg); });
+  setInterval(tick, POLL_MS);
+
+  server.listen(PORT, () => {
+    console.log(`fischio API on http://127.0.0.1:${PORT}  (rpc ${RPC})`);
+    console.log(`  REST: /health /markets /markets/:a /books /books/:a /settlements /trending`);
+    console.log(`  WS:   ws://127.0.0.1:${PORT}/ws  (snapshot channel, ${POLL_MS}ms)`);
+    tick();
+  });
+}

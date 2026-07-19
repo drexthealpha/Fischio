@@ -15,6 +15,10 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "comment": "node --test only expands glob patterns from 22 onwards. On 20 the test script reports 'Could not find test/**/*.test.mjs' and runs nothing, which reads as a missing directory rather than an unsupported flag. A bare directory argument is not the fix: that form works on 20 and fails on 24.",
+    "node": ">=22"
+  },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/spl-token": "^0.4.14",

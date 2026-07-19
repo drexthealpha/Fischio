@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd app && npm install --no-audit --no-fund && npm run build",
+  "outputDirectory": "app/dist",
+  "functions": {
+    "api/**/*.mjs": {
+      "includeFiles": "services/api/idl/**",
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/indexer/:path*", "destination": "/api/_not_deployed?service=indexer" },
+    { "source": "/relayer/:path*", "destination": "/api/_not_deployed?service=relayer" },
+    { "source": "/sponsor/:path*", "destination": "/api/_not_deployed?service=sponsor" },
+    { "source": "/supervisor/:path*", "destination": "/api/_not_deployed?service=ingest" },
+
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
